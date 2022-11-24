@@ -1,0 +1,10 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: ocaml-eio-coap
+Upstream-Contact: Tarides <contact@tarides.com>
+Source: https://github.com/adatario/ocaml-eio-coap
+
+# Sample paragraph, commented out:
+#
+# Files: src/*
+# Copyright: $YEAR $NAME <$CONTACT>
+# License: ...
