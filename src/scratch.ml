@@ -11,9 +11,10 @@ let listen_addr = `Tcp (Net.Ipaddr.V4.loopback, 5683)
 let handle_connection ~stdout socket addr =
   Flow.copy_string (Fmt.str "Connection from: %a\n" Net.Sockaddr.pp addr) stdout;
 
-  match Buf_read.parse ~max_size:4000 Coap.Message.parser_framed socket with
-  | Ok msg ->
-      Flow.copy_string (Fmt.str "message: %a\n" Coap.Message.pp msg) stdout
+  let buffer = Buf_read.of_flow socket ~max_size:64 in
+
+  match Buf_read.format_errors Coap.Message.parser_framed buffer with
+  | Ok msg -> Flow.copy_string (Fmt.str "RECV: %a\n" Coap.Message.pp msg) stdout
   | Error (`Msg msg) ->
       Flow.copy_string (Fmt.str "Parser error: %s\n" msg) stdout
 
