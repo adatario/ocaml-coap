@@ -1,5 +1,5 @@
 (*
- * SPDX-FileCopyrightText: 2022 Tarides <contact@tarides.com>
+ * SPDX-FileCopyrightText: 2022 iarides <contact@tarides.com>
  *
  * SPDX-License-Identifier: ISC
  *)
@@ -8,13 +8,19 @@ open Eio
 
 let listen_addr = `Tcp (Net.Ipaddr.V4.loopback, 5683)
 
-let handle_connection ~stdout socket addr =
+let handle_connection ~stdout (socket : Flow.two_way) addr =
   Flow.copy_string (Fmt.str "Connection from: %a\n" Net.Sockaddr.pp addr) stdout;
 
   let buffer = Buf_read.of_flow socket ~max_size:64 in
 
   match Buf_read.format_errors Coap.Message.parser_framed buffer with
-  | Ok msg -> Flow.copy_string (Fmt.str "RECV: %a\n" Coap.Message.pp msg) stdout
+  | Ok msg ->
+      Flow.copy_string (Fmt.str "RECV: %a\n" Coap.Message.pp msg) stdout;
+
+      Buf_write.with_flow socket (fun writer ->
+          Buf_write.pause writer;
+          Coap.Message.write_framed writer msg;
+          Buf_write.flush writer)
   | Error (`Msg msg) ->
       Flow.copy_string (Fmt.str "Parser error: %s\n" msg) stdout
 

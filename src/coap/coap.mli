@@ -25,11 +25,15 @@ module Message : sig
   val code : t -> Code.t
   val token : t -> int option
   val options : t -> Option.t list
-  val payload : t -> string
+  val payload : t -> string option
   val pp : t Fmt.t
 
   (** {1 Parsers} *)
 
   val parser : int -> t Eio.Buf_read.parser
   val parser_framed : t Eio.Buf_read.parser
+
+  (** {1 Writing} *)
+
+  val write_framed : Eio.Buf_write.t -> t -> unit
 end
