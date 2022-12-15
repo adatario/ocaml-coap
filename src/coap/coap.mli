@@ -4,12 +4,81 @@
  * SPDX-License-Identifier: ISC
  *)
 
+open Eio
+
+(** An OCaml implementation of The Constrained Application Protocol
+(CoAP) as defined by RFC 7252.
+
+CoAP is a network transport protocol specialized for use with
+constrained nodes and constrained networks (e.g. low-power,
+lousy). CoAP provides a request/response interaction model similar to
+HTTP. However, CoAP can also be used for observing resources (see
+module {!Observe}) and allows bi-directional requests.
+
+Being optimized for small and constrained devices, CoAP is designed to
+have small implementations. This makes it suitable for usage in
+embedded OCaml applications (e.g. MirageOS or js_of_ocaml).
+
+@see <https://www.rfc-editor.org/rfc/rfc7252> RFC 7252: The
+Constrained Application Protocol (CoAP)
+
+ *)
+
 module Message : sig
   module Code : sig
     type t
 
     val class' : t -> int
     val detail : t -> int
+
+    (** {1 Constructors} *)
+
+    val make : int -> int -> t
+    (** [make class' detail] returns the code with class [class'] and
+        detail [detail]. *)
+
+    (** {2 Request} *)
+
+    val get : t
+    val post : t
+    val put : t
+    val delete : t
+
+    (** {2 Response} *)
+
+    val created : t
+
+    (** {3 Success} *)
+
+    val deleted : t
+    val valid : t
+    val changed : t
+    val content : t
+
+    (** {3 Bad Request} *)
+
+    val bad_request : t
+    val unauthorized : t
+    val bad_option : t
+    val forbidden : t
+    val not_found : t
+    val method_not_allowed : t
+    val not_acceptable : t
+    val precondition_failed : t
+    val request_entity_too_large : t
+    val unsupported_content_format : t
+
+    (** {3 Server Error} *)
+
+    val internal_server_error : t
+    val not_implemented : t
+    val bad_gateway : t
+    val service_unavailable : t
+    val gateway_timeout : t
+    val proxying_not_supported : t
+
+    (** {1 Debug} *)
+
     val pp : t Fmt.t
   end
 
@@ -17,7 +86,13 @@ module Message : sig
     type t
 
     val number : t -> int
-    val value : t -> string
+    val value : t -> string option
+
+    (** {1 Constructors} *)
+
+    val make : int -> string option -> t
+    (** [make number value] returns a new option with number [number]
+  and value [value]. *)
   end
 
   type t
@@ -30,10 +105,21 @@ module Message : sig
 
   (** {1 Parsers} *)
 
-  val parser : int -> t Eio.Buf_read.parser
-  val parser_framed : t Eio.Buf_read.parser
+  val parser : int -> t Buf_read.parser
+  val parser_framed : t Buf_read.parser
 
   (** {1 Writing} *)
 
-  val write_framed : Eio.Buf_write.t -> t -> unit
+  val write_framed : Buf_write.t -> t -> unit
+end
+
+(** {1 Transport Layers} *)
+
+module Tcp : sig
+  type t
+  type handler = Message.t -> unit
+
+  val init : Flow.two_way -> t
+  val handle : sw:Switch.t -> handler -> t -> unit
+  val send : t -> Message.t -> unit
 end

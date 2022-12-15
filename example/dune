@@ -1,0 +1,3 @@
+(executable
+  (name tcp_server)
+  (libraries eio_main coap))

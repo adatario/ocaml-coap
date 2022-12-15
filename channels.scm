@@ -2,4 +2,4 @@
  (channel
   (name 'guix)
   (url "https://codeberg.org/pukkamustard/guix.git")
-  (commit "68f74f4bddfd8d656d27f8e57ba4176a3f684582")))
+  (commit "0f7b79cf77d8377758f4aaab564eeacfb283bb0e")))

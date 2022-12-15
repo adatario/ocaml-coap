@@ -1,3 +1,0 @@
-(executable
-  (name scratch)
-  (libraries eio eio_main coap))
