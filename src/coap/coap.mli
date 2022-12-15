@@ -88,6 +88,22 @@ module Message : sig
     val number : t -> int
     val value : t -> string option
 
+    (** {1 Properties} *)
+
+    (** {2 Critical/Elective} *)
+
+    (** @see <https://www.rfc-editor.org/rfc/rfc7252#section-5.4.1> Section 5.4.1 of RFC 7252 *)
+
+    val is_critical : t -> bool
+    val is_elective : t -> bool
+
+    (** {2 Proxy Unsafe} *)
+
+    (** @see <https://www.rfc-editor.org/rfc/rfc7252#section-5.4.2> Section 5.4.2 of RFC 7252 *)
+
+    val is_proxy_unsafe : t -> bool
+    val is_safe_to_forward : t -> bool
+
     (** {1 Constructors} *)
 
     val make : int -> string option -> t
@@ -116,6 +132,12 @@ end
 (** {1 Transport Layers} *)
 
 module Tcp : sig
+  (** CoAP (Constrained Application Protocol) over TCP
+
+      @see <https://www.rfc-editor.org/rfc/rfc8323> RFC 8323: CoAP
+        (Constrained Application Protocol) over TCP, TLS, and WebSockets
+   *)
+
   type t
   type handler = Message.t -> unit
 

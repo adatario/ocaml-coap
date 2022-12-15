@@ -123,9 +123,18 @@ module Option = struct
   let number t = t.number
   let value t = t.value
 
+  (** Properties *)
+
+  let is_critical t = t.number land 1 > 0
+  let is_elective t = not @@ is_critical t
+  let is_proxy_unsafe t = t.number land 2 > 0
+  let is_safe_to_forward t = not @@ is_proxy_unsafe t
+
   (** Constructors *)
 
   let make number value = { number; value }
+
+  (** Parser *)
 
   let parser_1 current_number =
     let open Buf_read in
