@@ -18,7 +18,10 @@ let listen ~net ~sw ~stdout () =
   in
   let rec loop () =
     Net.accept_fork ~sw listen_socket
-      ~on_error:(fun _exn -> Flow.copy_string "ERROR\n" stdout)
+      ~on_error:(fun exn ->
+        Flow.copy_string
+          (Fmt.str "ERROR: %s\n" @@ Printexc.to_string exn)
+          stdout)
       (fun socket addr ->
         Flow.copy_string
           (Fmt.str "Connection from: %a\n" Net.Sockaddr.pp addr)

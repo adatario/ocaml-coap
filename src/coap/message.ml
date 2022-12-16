@@ -6,6 +6,8 @@
 
 open Eio
 
+exception FormatError of string
+
 module Common = struct
   (* Helpers for reading and writing CoAP structures that appear in
      many places. *)
@@ -23,32 +25,44 @@ module Common = struct
         (fun s -> Bytes.(Int32.to_int @@ get_int32_le (of_string s) 0))
         (take 4)
 
+    let uint64_le =
+      map
+        (fun s -> Bytes.(Int64.to_int @@ get_int64_le (of_string s) 0))
+        (take 8)
+
     let some = map Option.some
     let none = return None
 
     (** [extended_length l] reads the extended length if indicated by
-  [l] and returns the length and number of bytes read. *)
+     [l] and returns a parser to read the extended length and number of
+     bytes that will be read. *)
     let extended_length l =
-      if l <= 12 then return l
-      else if l = 13 then map (fun l -> l - 13) uint8
-      else if l = 14 then map (fun l -> l - 269) uint16_le
-      else if l = 15 then map (fun l -> l - 65805) uint32_le
-      else failwith "invalid length"
+      if l <= 12 then (return l, 0)
+      else if l = 13 then (map (fun l -> l + 13) uint8, 1)
+      else if l = 14 then (map (fun l -> l + 269) uint16_le, 2)
+      else if l = 15 then (map (fun l -> l + 65805) uint32_le, 4)
+      else
+        failwith
+          "internal error: extended_length expects an uint8 but was passed a \
+           larger integer"
+
+    let option_length l =
+      match extended_length l with
+      | _, byte_count when byte_count = 4 -> None
+      | parser, byte_count -> Some (parser, byte_count)
 
     let token tkl =
       if tkl = 0 then return None
       else if tkl = 1 then some uint8
       else if tkl = 2 then some uint16_le
+      else if tkl = 3 then failwith "TODO: parser 24 bit token"
       else if tkl = 4 then some uint32_le
-      else failwith "invalid token length"
-
-    let option_length l =
-      (* also returns the number of bytes consumed *)
-      if l <= 12 then return (Some (l, 0))
-      else if l = 13 then map (fun l -> Some (l - 13, 1)) uint8
-      else if l = 14 then map (fun l -> Some (l - 269, 2)) uint16_le
-      else if l = 15 then return None
-      else failwith "invalid length"
+      else if tkl = 5 then failwith "TODO: parse 40 bit token"
+      else if tkl = 6 then failwith "TODO: parse 48 bit token"
+      else if tkl = 7 then failwith "TODO: parse 56 bit token"
+        (* TODO: token should probably be an Int64 *)
+      else if tkl = 8 then some uint64_le
+      else raise (FormatError "invalid token length")
   end
 
   module Write = struct
@@ -120,6 +134,19 @@ end
 module Option = struct
   type t = { number : int; value : string option }
 
+  let pp =
+    Fmt.(
+      hbox @@ braces
+      @@ record ~sep:semi
+           [
+             field "number" (fun o -> o.number) int;
+             field "value"
+               (fun o -> o.value)
+               (option
+                  ~none:(styled `Faint @@ any "None")
+                  (on_string @@ octets ()));
+           ])
+
   let number t = t.number
   let value t = t.value
 
@@ -145,34 +172,30 @@ module Option = struct
     let ib_delta = (initial_byte land 0b11110000) lsr 4 in
     let ib_value_len = initial_byte land 0b00001111 in
 
-    (* Delta (possibly extended) *)
-    let* delta_opt = option_length ib_delta in
+    let delta_parser_opt = option_length ib_delta in
+    let value_len_parser_opt = option_length ib_value_len in
 
-    match delta_opt with
-    | Some (delta, delta_xlen) -> (
-        (* Value length (possibly extended) *)
-        let* value_len_opt = option_length ib_value_len in
+    match (delta_parser_opt, value_len_parser_opt) with
+    | Some (delta_parser, delta_xlen), Some (value_len_parser, value_xlen) ->
+        let* delta = delta_parser in
+        let* value_len = value_len_parser in
 
-        match value_len_opt with
-        | Some (value_len, _) when value_len = 0 ->
-            return
-            @@ Some
-                 ( { number = current_number + delta; value = None },
-                   1 + delta_xlen )
-        | Some (value_len, value_xlen) ->
-            let* value = take value_len in
-            return
-            @@ Some
-                 ( { number = current_number + delta; value = Some value },
-                   1 + delta_xlen + value_xlen + value_len )
-        | None -> failwith "message format error: invalid option length")
-    | None ->
-        (* delta value is 0xF, ib_len must also be 0xf - the payload marker *)
-        if ib_value_len = 0xf then none
-        else
-          failwith
-            "message format error: option delta value is 0xf\n\
-            \           but option lenght is not 0xf"
+        let consumed = 1 + delta_xlen + value_xlen + value_len in
+
+        let number = current_number + delta in
+        let* value =
+          if value_len = 0 then return None
+          else take value_len |> map Option.some
+        in
+
+        let option = { number; value } in
+
+        return @@ Some (option, consumed)
+    | Some _, None | None, Some _ ->
+        failwith
+          "message format error: option delta value is 0xf\n\
+          \           but option lenght is not 0xf"
+    | None, None -> return @@ None
 
   let parser_many len =
     let open Buf_read in
@@ -190,19 +213,6 @@ module Option = struct
     let* options_rev, consumed = loop [] 0 0 in
 
     return @@ (List.rev options_rev, consumed)
-
-  let pp =
-    Fmt.(
-      hbox @@ braces
-      @@ record ~sep:semi
-           [
-             field "number" (fun o -> o.number) int;
-             field "value"
-               (fun o -> o.value)
-               (option
-                  ~none:(styled `Faint @@ any "None")
-                  (on_string @@ octets ()));
-           ])
 
   (* Writer *)
 
@@ -286,11 +296,14 @@ let parser_framed =
   let open Common.Read in
   (* Initial byte *)
   let* initial_byte = uint8 in
+
   let ib_len = initial_byte lsr 4 in
+
   let tkl = initial_byte land 0xf in
 
   (* Extended length (if any) *)
-  let* length = extended_length ib_len in
+  let length_parser, _bytes_consumed = extended_length ib_len in
+  let* length = length_parser in
 
   (* Code *)
   let* code = uint8 in
@@ -302,7 +315,8 @@ let parser_framed =
   let* options, consumed = Option.parser_many length in
 
   (* Payload *)
-  let payload_length = length - consumed in
+  let payload_length = length - consumed - 1 in
+
   let* payload =
     if payload_length > 0 then map Stdlib.Option.some (take payload_length)
     else return None
