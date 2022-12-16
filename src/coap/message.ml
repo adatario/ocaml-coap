@@ -86,6 +86,11 @@ module Common = struct
       | Some token when token < 1 lsl 32 ->
           (4, fun writer -> LE.uint32 writer @@ Int32.of_int token)
       | _ -> failwith "invalid token (too large)"
+
+    let to_string ~buffer_size f =
+      let buffer = Buffer.create buffer_size in
+      with_flow (Flow.buffer_sink buffer) (fun writer -> f writer);
+      Buffer.to_bytes buffer |> Bytes.to_string
   end
 end
 
@@ -137,6 +142,10 @@ module Option = struct
   let number t = t.number
   let value t = t.value
 
+  (** Constructors *)
+
+  let make number value = { number; value }
+
   (** Properties *)
 
   let is_critical t = t.number land 1 > 0
@@ -144,9 +153,42 @@ module Option = struct
   let is_proxy_unsafe t = t.number land 2 > 0
   let is_safe_to_forward t = not @@ is_proxy_unsafe t
 
-  (** Constructors *)
+  (* CoAP Options *)
 
-  let make number value = { number; value }
+  let filter_map_option_values ~number f =
+    List.filter_map (fun option ->
+        if option.number = number then Option.bind option.value f else None)
+
+  let uri_host host = make 3 (Some host)
+
+  let get_uri_host options =
+    filter_map_option_values ~number:3 Option.some options
+    |> List.find_opt (Fun.const true)
+
+  let uri_port port =
+    let value =
+      Common.Write.to_string ~buffer_size:2
+        Buf_write.(
+          fun writer ->
+            if port < 256 then uint8 writer port else LE.uint16 writer port)
+    in
+    make 7 (Some value)
+
+  let get_uri_port options =
+    filter_map_option_values ~number:7
+      (fun value ->
+        if String.length value = 1 then
+          Some Buf_read.(parse_string_exn Common.Read.uint8 value)
+        else if String.length value = 2 then
+          Some Buf_read.(parse_string_exn Common.Read.uint16_le value)
+        else None)
+      options
+    |> List.find_opt (Fun.const true)
+
+  let uri_path = List.map (fun segment -> make 11 (Some segment))
+  let get_uri_path = filter_map_option_values ~number:11 Option.some
+  let uri_query = List.map (fun part -> make 15 (Some part))
+  let get_uri_query = filter_map_option_values ~number:15 Option.some
 
   (** Pretty Printing *)
 
@@ -247,13 +289,9 @@ module Option = struct
            option.number)
          0 sorted_options
 
-  let to_bytes options =
+  let to_string options =
     (* TODO: heuristics on how large the options will be *)
-    let options_buffer = Buffer.create 8 in
-    Buf_write.with_flow (Flow.buffer_sink options_buffer) (fun writer ->
-        write writer options;
-        Buf_write.flush writer;
-        Buffer.to_bytes options_buffer)
+    Common.Write.to_string ~buffer_size:8 (fun writer -> write writer options)
 end
 
 type t = {
@@ -337,7 +375,7 @@ let parser _len = failwith "TODO"
 let write_framed writer message =
   let open Buf_write in
   let open Common.Write in
-  let options_bytes = Option.to_bytes message.options in
+  let options_s = Option.to_string message.options in
 
   let payload_length =
     Stdlib.Option.(
@@ -349,7 +387,7 @@ let write_framed writer message =
       |> value ~default:0)
   in
 
-  let length = Bytes.length options_bytes + payload_length in
+  let length = String.length options_s + payload_length in
 
   (* initial byte *)
   let length_ib, length_extended = extended length in
@@ -361,7 +399,7 @@ let write_framed writer message =
   uint8 writer message.code;
   token writer;
 
-  bytes writer options_bytes;
+  string writer options_s;
 
   match message.payload with
   | Some payload ->

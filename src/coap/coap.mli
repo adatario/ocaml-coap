@@ -88,27 +88,48 @@ module Message : sig
     val number : t -> int
     val value : t -> string option
 
+    (** {1 Constructors} *)
+
+    val make : int -> string option -> t
+    (** [make number value] returns a new option with number [number]
+  and value [value]. *)
+
     (** {1 Properties} *)
 
     (** {2 Critical/Elective} *)
 
-    (** @see <https://www.rfc-editor.org/rfc/rfc7252#section-5.4.1> Section 5.4.1 of RFC 7252 *)
+    (** @see <https://www.rfc-editor.org/rfc/rfc7252#section-5.4.1>
+    Section 5.4.1 of RFC 7252 *)
 
     val is_critical : t -> bool
     val is_elective : t -> bool
 
     (** {2 Proxy Unsafe} *)
 
-    (** @see <https://www.rfc-editor.org/rfc/rfc7252#section-5.4.2> Section 5.4.2 of RFC 7252 *)
+    (** @see <https://www.rfc-editor.org/rfc/rfc7252#section-5.4.2>
+    Section 5.4.2 of RFC 7252 *)
 
     val is_proxy_unsafe : t -> bool
     val is_safe_to_forward : t -> bool
 
-    (** {1 Constructors} *)
+    (** {1 CoAP Options} *)
 
-    val make : int -> string option -> t
-    (** [make number value] returns a new option with number [number]
-  and value [value]. *)
+    (** Helpers for constructing and accessing pre-defined CoAP
+    numbers *)
+
+    (** {2 Uri-Host, Uri-Port, Uri-Path, and Uri-Query} *)
+
+    (** @see <https://www.rfc-editor.org/rfc/rfc7252#section-5.10.1>
+  Section 5.10.1 of RFC 7252 *)
+
+    val uri_host : string -> t
+    val get_uri_host : t list -> string option
+    val uri_port : int -> t
+    val get_uri_port : t list -> int option
+    val uri_path : string list -> t list
+    val get_uri_path : t list -> string list
+    val uri_query : string list -> t list
+    val get_uri_query : t list -> string list
   end
 
   type t
