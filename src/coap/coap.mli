@@ -17,7 +17,8 @@ module {!Observe}) and allows bi-directional requests.
 
 Being optimized for small and constrained devices, CoAP is designed to
 have small implementations. This makes it suitable for usage in
-embedded OCaml applications (e.g. MirageOS or js_of_ocaml).
+embedded OCaml applications (e.g. MirageOS) and other places wher code
+size matters.
 
 @see <https://www.rfc-editor.org/rfc/rfc7252> RFC 7252: The
 Constrained Application Protocol (CoAP)
