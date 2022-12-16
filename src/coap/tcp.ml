@@ -6,23 +6,48 @@
 
 open Eio
 
-type t = { flow : Flow.two_way }
+module Signaling = struct
+  open Message.Code
+
+  let csm = make 7 1
+  let ping = make 7 2
+  let is_signaling code = class' code = 7 && detail code < 32
+end
+
+type t = { flow : Flow.two_way; read_buffer : Buf_read.t }
 type handler = Message.t -> unit
 
 let send t msg =
   Buf_write.with_flow t.flow (fun writer -> Message.write_framed writer msg)
 
-let init flow = { flow }
+let read_msg t =
+  match Message.parser_framed t.read_buffer with
+  | msg -> Some msg
+  | exception End_of_file -> None
+
+let init flow =
+  (* init a read buffer *)
+  let read_buffer = Buf_read.of_flow flow ~max_size:(2 lsl 16) in
+
+  let t = { flow; read_buffer } in
+
+  (* At the start of transport connection a CSM message must be sent
+     and is expected (see https://www.rfc-editor.org/rfc/rfc8323#section-5.3) *)
+  let my_csm = Message.make ~code:Signaling.csm ~options:[] None in
+  send t my_csm;
+
+  t
 
 let handle ~sw handler t =
-  let reader = Buf_read.of_flow t.flow ~max_size:64 in
-
-  let rec recv () =
-    match Buf_read.format_errors Message.parser_framed reader with
-    | Ok msg ->
-        Fiber.fork ~sw (fun () -> handler msg);
-        recv ()
-    | Error (`Msg msg) -> failwith msg
+  let rec read_loop () =
+    match read_msg t with
+    | Some msg ->
+        if Signaling.is_signaling msg.code then
+          (* TODO handle CSM messages *)
+          read_loop ()
+        else Fiber.fork ~sw (fun () -> handler msg);
+        read_loop ()
+    | None -> ()
   in
 
-  recv ()
+  read_loop ()

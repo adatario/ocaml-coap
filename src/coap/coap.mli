@@ -119,6 +119,11 @@ module Message : sig
   val payload : t -> string option
   val pp : t Fmt.t
 
+  (** {1 Constructor} *)
+
+  val make :
+    code:Code.t -> ?token:int -> options:Option.t list -> string option -> t
+
   (** {1 Parsers} *)
 
   val parser : int -> t Buf_read.parser

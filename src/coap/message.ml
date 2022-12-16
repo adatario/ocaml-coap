@@ -134,19 +134,6 @@ end
 module Option = struct
   type t = { number : int; value : string option }
 
-  let pp =
-    Fmt.(
-      hbox @@ braces
-      @@ record ~sep:semi
-           [
-             field "number" (fun o -> o.number) int;
-             field "value"
-               (fun o -> o.value)
-               (option
-                  ~none:(styled `Faint @@ any "None")
-                  (on_string @@ octets ()));
-           ])
-
   let number t = t.number
   let value t = t.value
 
@@ -160,6 +147,21 @@ module Option = struct
   (** Constructors *)
 
   let make number value = { number; value }
+
+  (** Pretty Printing *)
+
+  let pp =
+    Fmt.(
+      hbox @@ braces
+      @@ record ~sep:semi
+           [
+             field "number" (fun o -> o.number) int;
+             field "value"
+               (fun o -> o.value)
+               (option
+                  ~none:(styled `Faint @@ any "None")
+                  (on_string @@ octets ()));
+           ])
 
   (** Parser *)
 
@@ -287,6 +289,10 @@ let pp ppf =
                 ~none:(styled `Faint @@ any "None")
                 (on_string @@ octets ()));
          ])
+
+(* Constructor *)
+
+let make ~code ?token ~options payload = { code; token; options; payload }
 
 (* Parsers *)
 
