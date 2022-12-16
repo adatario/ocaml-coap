@@ -32,7 +32,7 @@ Currently only CoAP over TCP is supported (see [RFC 8323](https://www.rfc-editor
 ## Development environment
 
 ```
-guix time-machine -C channels.scm --disable-authentication -- shell -f -D guix.scm
+guix time-machine -C channels.scm --disable-authentication -- shell -Df guix.scm
 ```
 
 ## License
