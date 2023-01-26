@@ -87,6 +87,7 @@ end
 module Code = struct
   type t = int
 
+  let equal = Int.equal
   let class' t = t lsr 5
   let detail t = t land 0b00011111
 
@@ -144,16 +145,46 @@ module Option = struct
   let is_proxy_unsafe t = t.number land 2 > 0
   let is_safe_to_forward t = not @@ is_proxy_unsafe t
 
-  (* CoAP Options *)
+  (** Utilities *)
 
-  let filter_map_option_values ~number f =
+  let filter_map ?number f =
     List.filter_map (fun option ->
-        if option.number = number then Option.bind option.value f else None)
+        match number with
+        | Some number -> if option.number = number then f option else None
+        | None -> f option)
+
+  let filter_map_values ?number f =
+    filter_map ?number (fun option -> Option.bind option.value f)
+
+  let rec get_uint value =
+    let len = String.length value in
+    let reader = Buf_read.of_flow ~max_size:len @@ Flow.string_source value in
+
+    (* handle odd uint lenghts by front-padding 0s *)
+    let pad_front n s =
+      String.to_seq s
+      |> Seq.append (Seq.init n (Fun.const @@ Char.chr 0))
+      |> String.of_seq
+    in
+    if len = 1 then Option.some @@ Common.Read.uint8 reader
+    else if len = 2 then Option.some @@ Buf_read.LE.uint16 reader
+    else if len = 3 then get_uint @@ pad_front 1 value
+    else if len = 4 then
+      Option.some @@ Int32.to_int @@ Buf_read.LE.uint32 reader
+    else if len = 5 then get_uint @@ pad_front 1 value
+    else if len = 6 then
+      Option.some @@ Int64.to_int @@ Buf_read.LE.uint48 reader
+    else if len = 7 then get_uint @@ pad_front 1 value
+    else if len = 8 then
+      Option.some @@ Int64.to_int @@ Buf_read.LE.uint64 reader
+    else None
+
+  (* CoAP Options *)
 
   let uri_host host = make 3 (Some host)
 
   let get_uri_host options =
-    filter_map_option_values ~number:3 Option.some options
+    filter_map_values ~number:3 Option.some options
     |> List.find_opt (Fun.const true)
 
   let uri_port port =
@@ -166,7 +197,7 @@ module Option = struct
     make 7 (Some value)
 
   let get_uri_port options =
-    filter_map_option_values ~number:7
+    filter_map_values ~number:7
       (fun value ->
         if String.length value = 1 then
           Some Buf_read.(parse_string_exn Common.Read.uint8 value)
@@ -177,9 +208,9 @@ module Option = struct
     |> List.find_opt (Fun.const true)
 
   let uri_path = List.map (fun segment -> make 11 (Some segment))
-  let get_uri_path = filter_map_option_values ~number:11 Option.some
+  let get_uri_path = filter_map_values ~number:11 Option.some
   let uri_query = List.map (fun part -> make 15 (Some part))
-  let get_uri_query = filter_map_option_values ~number:15 Option.some
+  let get_uri_query = filter_map_values ~number:15 Option.some
 
   (** Pretty Printing *)
 

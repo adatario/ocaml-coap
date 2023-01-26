@@ -29,6 +29,7 @@ module Message : sig
   module Code : sig
     type t
 
+    val equal : t -> t -> bool
     val class' : t -> int
     val detail : t -> int
 
@@ -112,6 +113,17 @@ module Message : sig
     val is_proxy_unsafe : t -> bool
     val is_safe_to_forward : t -> bool
 
+    (** {1 Utilties} *)
+
+    val filter_map : ?number:int -> (t -> 'a option) -> t list -> 'a list
+
+    val filter_map_values :
+      ?number:int -> (string -> 'a option) -> t list -> 'a list
+
+    (** {2 Option Value Formats} *)
+
+    val get_uint : string -> int option
+
     (** {1 CoAP Options} *)
 
     (** Helpers for constructing and accessing pre-defined CoAP
@@ -171,7 +183,7 @@ module Tcp : sig
   type t
   type handler = Message.t -> unit
 
-  val init : #Flow.two_way -> t
+  val init : ?max_message_size:int -> #Flow.two_way -> t
   val handle : sw:Switch.t -> handler -> t -> unit
   val send : t -> Message.t -> unit
 end
