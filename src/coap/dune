@@ -1,4 +1,4 @@
 (library
  (name coap)
- (libraries eio fmt)
- (package coap))
+ (public_name coap)
+ (libraries eio fmt))
