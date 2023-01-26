@@ -168,7 +168,7 @@ module Tcp : sig
   type t
   type handler = Message.t -> unit
 
-  val init : Flow.two_way -> t
+  val init : #Flow.two_way -> t
   val handle : sw:Switch.t -> handler -> t -> unit
   val send : t -> Message.t -> unit
 end

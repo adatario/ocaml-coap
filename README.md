@@ -8,6 +8,40 @@ Being optimized for small and constrained devices, CoAP is designed to have smal
 
 See also [the library interface](./src/coap/coap.mli).
 
+## Examples
+
+A simple CoAP server and client is provided in the [examples](./examples) folder.
+
+Start a server:
+
+```
+$ dune exec examples/tcp_server.exe
++New connection from: tcp:127.0.0.1:49220
++RECV: <CoAP code: 0.01
++            token: None
++            options:
++             [{number: 3;
++               value: 6c6f 6361 6c68 6f73 74};
++              {number: 11;
++               value: 6869};
++              {number: 11;
++               value: 6f63 616d 6c2d 636f 6170}]
++            payload: 4865 6c6c 6f20 436f 4150 2120 3132 3332 3133 2031 3233
++             3132 3320 3132 3331 3233>
++Uri-Path: hi/ocaml-coap
++SEND: <CoAP code: 2.05
++            token: None
++            options: []
++            payload: 4869 2063 6f61 702d 636c 6965 6e74 21>
+```
+
+Use the [libcoap](https://libcoap.net/) `coap-client` tool (provided in the Guix development environment) to make a request:
+
+```
+ $ coap-client -m get -e "Hello ocaml-coap!" coap+tcp://localhost:5683/hi/ocaml-coap
+Hi coap-client!
+```
+
 ## Status
 
 Work-in-progress.
@@ -17,6 +51,7 @@ Currently only CoAP over TCP is supported (see [RFC 8323](https://www.rfc-editor
 ### TODOs
 
 - [ ] CoAP over UDP
+- [ ] TCP connection signaling messages (ping, pong, etc.)
 - [ ] Find nice abstraction for handling various transport layers
 - [ ] Block-wise transport ([RFC 7959](https://www.rfc-editor.org/rfc/rfc7959))
 - [ ] Observing resources ([RFC 7641](https://www.rfc-editor.org/rfc/rfc7641))

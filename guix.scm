@@ -56,12 +56,12 @@ packet sizes.  This protocol, CoAP, is standardized by the IETF as RFC
     (home-page "https://libcoap.net/")
     (license license:bsd-2)))
 
-(define-public ocaml5.0-eio-coap
+(define-public ocaml5.0-coap
   (package-with-ocaml5.0
    (package
-    (name "ocaml-eio-coap")
+    (name "ocaml-coap")
     (version "0.0.0")
-    (home-page "https://github.com/adatario/ocaml-eio-coap")
+    (home-page "https://github.com/adatario/ocaml-coap")
     (source (git-checkout (url (dirname (current-filename)))))
     (build-system dune-build-system)
     (propagated-inputs
@@ -69,12 +69,20 @@ packet sizes.  This protocol, CoAP, is standardized by the IETF as RFC
 	   ocaml5.0-eio-main
 	   libuv))
     (native-inputs
-     (list ocaml-merlin
-	   ocaml-dot-merlin-reader
-	   libcoap
-	   netcat))
+     (list
+      ;; Testing
+      ocaml-alcotest
+      ocaml-qcheck
+
+      ;; CoAP dev tools
+      libcoap
+      netcat
+
+      ;; OCaml dev tools
+      ocaml-merlin
+      ocaml-dot-merlin-reader))
     (synopsis #f)
     (description #f)
     (license license:isc))))
 
-ocaml5.0-eio-coap
+ocaml5.0-coap
