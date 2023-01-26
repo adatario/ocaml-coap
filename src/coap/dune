@@ -1,3 +1,4 @@
 (library
-  (name coap)
-  (libraries eio fmt))
+ (name coap)
+ (libraries eio fmt)
+ (package coap))
