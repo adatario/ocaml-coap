@@ -18,6 +18,12 @@ type t = { flow : Flow.two_way; read_buffer : Buf_read.t }
 type handler = Message.t -> unit
 
 let send t msg =
+  (* let msg_s = *)
+  (*   Message.Common.Write.to_string ~buffer_size:32 (fun writer -> *)
+  (*       Message.write_framed writer msg) *)
+  (* in *)
+
+  (* traceln "SEND bytes: %a" Fmt.(on_string @@ hex ()) msg_s; *)
   Buf_write.with_flow t.flow (fun writer -> Message.write_framed writer msg)
 
 let read_msg t =
@@ -26,6 +32,7 @@ let read_msg t =
   | exception End_of_file -> None
 
 let init flow =
+  let flow = (flow :> Flow.two_way) in
   (* init a read buffer *)
   let read_buffer = Buf_read.of_flow flow ~max_size:(2 lsl 16) in
 
@@ -42,9 +49,10 @@ let handle ~sw handler t =
   let rec read_loop () =
     match read_msg t with
     | Some msg ->
-        if Signaling.is_signaling msg.code then
+        if Signaling.is_signaling msg.code then (
           (* TODO handle CSM messages *)
-          read_loop ()
+          traceln "TODO: handle CSM message";
+          read_loop ())
         else Fiber.fork ~sw (fun () -> handler msg);
         read_loop ()
     | None -> ()

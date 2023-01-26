@@ -1,0 +1,3 @@
+(tests
+(names message_test)
+(libraries coap qcheck-alcotest qcheck eio_main))

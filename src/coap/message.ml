@@ -132,7 +132,10 @@ module Option = struct
 
   (** Constructors *)
 
-  let make number value = { number; value }
+  let make number value =
+    match value with
+    | Some v when String.length v = 0 -> { number; value = None }
+    | _ -> { number; value }
 
   (** Properties *)
 
@@ -242,9 +245,10 @@ module Option = struct
       | None -> return (prev, total_consumed)
     in
 
-    let* options_rev, consumed = loop [] 0 0 in
-
-    return @@ (List.rev options_rev, consumed)
+    if len > 0 then
+      let* options_rev, consumed = loop [] 0 0 in
+      return @@ (List.rev options_rev, consumed)
+    else return ([], 0)
 
   (* Writer *)
 

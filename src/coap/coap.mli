@@ -47,10 +47,9 @@ module Message : sig
 
     (** {2 Response} *)
 
-    val created : t
-
     (** {3 Success} *)
 
+    val created : t
     val deleted : t
     val valid : t
     val changed : t
@@ -131,6 +130,10 @@ module Message : sig
     val get_uri_path : t list -> string list
     val uri_query : string list -> t list
     val get_uri_query : t list -> string list
+
+    (** {1 Pretty Printing} *)
+
+    val pp : t Fmt.t
   end
 
   type t

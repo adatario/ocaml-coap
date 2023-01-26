@@ -1,5 +1,5 @@
 (*
- * SPDX-FileCopyrightText: 2022 iarides <contact@tarides.com>
+ * SPDX-FileCopyrightText: 2022 Tarides <contact@tarides.com>
  *
  * SPDX-License-Identifier: ISC
  *)

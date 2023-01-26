@@ -1,5 +1,5 @@
 (*
- * SPDX-FileCopyrightText: 2022 iarides <contact@tarides.com>
+ * SPDX-FileCopyrightText: 2022 Tarides <contact@tarides.com>
  *
  * SPDX-License-Identifier: ISC
  *)
@@ -17,7 +17,6 @@ let handler session message =
   let response =
     Coap.Message.(make ~code:Code.content ~options:[] (Some "Hi coap-client!"))
   in
-  traceln "SEND: %a" Coap.Message.pp response;
 
   Coap.Tcp.send session response
 
