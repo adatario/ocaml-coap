@@ -16,20 +16,6 @@ module Common = struct
     open Buf_read
 
     let uint8 = map Char.code any_char
-
-    let uint16_le =
-      map (fun s -> Bytes.(get_uint16_le (of_string s) 0)) (take 2)
-
-    let uint32_le =
-      map
-        (fun s -> Bytes.(Int32.to_int @@ get_int32_le (of_string s) 0))
-        (take 4)
-
-    let uint64_le =
-      map
-        (fun s -> Bytes.(Int64.to_int @@ get_int64_le (of_string s) 0))
-        (take 8)
-
     let some = map Option.some
     let none = return None
 
@@ -39,8 +25,10 @@ module Common = struct
     let extended_length l =
       if l <= 12 then (return l, 0)
       else if l = 13 then (map (fun l -> l + 13) uint8, 1)
-      else if l = 14 then (map (fun l -> l + 269) uint16_le, 2)
-      else if l = 15 then (map (fun l -> l + 65805) uint32_le, 4)
+      else if l = 14 then (map (fun l -> l + 269) LE.uint16, 2)
+      else if l = 15 then
+        (* int handling on 32 bit machines where Int is 31 bit. *)
+        (map (fun l -> l + 65805) (map Int32.to_int LE.uint32), 4)
       else
         failwith
           "internal error: extended_length expects an uint8 but was passed a \
@@ -54,14 +42,14 @@ module Common = struct
     let token tkl =
       if tkl = 0 then return None
       else if tkl = 1 then some uint8
-      else if tkl = 2 then some uint16_le
+      else if tkl = 2 then some LE.uint16
       else if tkl = 3 then failwith "TODO: parser 24 bit token"
-      else if tkl = 4 then some uint32_le
+      else if tkl = 4 then some (map Int32.to_int LE.uint32)
       else if tkl = 5 then failwith "TODO: parse 40 bit token"
       else if tkl = 6 then failwith "TODO: parse 48 bit token"
       else if tkl = 7 then failwith "TODO: parse 56 bit token"
         (* TODO: token should probably be an Int64 *)
-      else if tkl = 8 then some uint64_le
+      else if tkl = 8 then some (map Int64.to_int LE.uint64)
       else raise (FormatError "invalid token length")
   end
 
@@ -180,7 +168,7 @@ module Option = struct
         if String.length value = 1 then
           Some Buf_read.(parse_string_exn Common.Read.uint8 value)
         else if String.length value = 2 then
-          Some Buf_read.(parse_string_exn Common.Read.uint16_le value)
+          Some Buf_read.(parse_string_exn Buf_read.LE.uint16 value)
         else None)
       options
     |> List.find_opt (Fun.const true)
