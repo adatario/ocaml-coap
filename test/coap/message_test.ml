@@ -62,7 +62,7 @@ module Message = struct
   end
 
   let arbitrary_payload = QCheck.(option string_printable)
-  let arbitrary_token = QCheck.(option int)
+  let arbitrary_token = QCheck.(option pos_int)
 
   let arbitrary =
     QCheck.(

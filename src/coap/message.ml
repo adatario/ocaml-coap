@@ -71,9 +71,9 @@ module Common = struct
       | Some token when token < 256 -> (1, fun writer -> uint8 writer token)
       | Some token when token < 65536 ->
           (2, fun writer -> LE.uint16 writer token)
-      | Some token when token < 1 lsl 32 ->
+      | Some token when token < 1 lsl 31 ->
           (4, fun writer -> LE.uint32 writer @@ Int32.of_int token)
-      | _ -> failwith "invalid token (too large)"
+      | Some token -> (8, fun writer -> LE.uint64 writer @@ Int64.of_int token)
 
     let to_string ~buffer_size f =
       let buffer = Buffer.create buffer_size in
