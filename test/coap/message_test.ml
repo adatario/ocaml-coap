@@ -62,16 +62,18 @@ module Message = struct
   end
 
   let arbitrary_payload = QCheck.(option string_printable)
+  let arbitrary_token = QCheck.(option int)
 
   let arbitrary =
     QCheck.(
       map
-        ~rev:(fun msg -> Coap.Message.(code msg, options msg, payload msg))
-        (fun (code, options, payload) ->
-          Coap.Message.make ~code ~options payload)
-      @@ tup3 Code.arbitrary Option.arbitrary arbitrary_payload)
+        ~rev:(fun msg ->
+          Coap.Message.(code msg, token msg, options msg, payload msg))
+        (fun (code, token, options, payload) ->
+          Coap.Message.make ~code ?token ~options payload)
+      @@ tup4 Code.arbitrary arbitrary_token Option.arbitrary arbitrary_payload)
 
-  let testable = Alcotest.testable Coap.Message.pp ( = )
+  let testable = Alcotest.testable Coap.Message.pp Coap.Message.equal
 end
 
 let write_to_string ~buffer_size f =

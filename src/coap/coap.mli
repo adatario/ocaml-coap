@@ -86,6 +86,7 @@ module Message : sig
   module Options : sig
     type t
 
+    val equal : t -> t -> bool
     val number : t -> int
     val value : t -> string option
 
@@ -150,6 +151,7 @@ module Message : sig
 
   type t
 
+  val equal : t -> t -> bool
   val code : t -> Code.t
   val token : t -> int option
   val options : t -> Options.t list

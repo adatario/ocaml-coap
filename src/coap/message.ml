@@ -46,7 +46,7 @@ module Common = struct
       else if tkl = 3 then failwith "TODO: parser 24 bit token"
       else if tkl = 4 then some (map Int32.to_int LE.uint32)
       else if tkl = 5 then failwith "TODO: parse 40 bit token"
-      else if tkl = 6 then failwith "TODO: parse 48 bit token"
+      else if tkl = 6 then some (map Int64.to_int LE.uint48)
       else if tkl = 7 then failwith "TODO: parse 56 bit token"
         (* TODO: token should probably be an Int64 *)
       else if tkl = 8 then some (map Int64.to_int LE.uint64)
@@ -128,6 +128,9 @@ end
 module Options = struct
   type t = { number : int; value : string option }
 
+  let equal a b =
+    Int.equal a.number b.number && Option.equal String.equal a.value b.value
+
   let number t = t.number
   let value t = t.value
 
@@ -160,21 +163,19 @@ module Options = struct
     let len = String.length value in
     let reader = Buf_read.of_flow ~max_size:len @@ Flow.string_source value in
 
-    (* handle odd uint lenghts by front-padding 0s *)
-    let pad_front n s =
-      String.to_seq s
-      |> Seq.append (Seq.init n (Fun.const @@ Char.chr 0))
-      |> String.of_seq
+    (* handle odd uint lenghts by padding a 0 at the most significant position. *)
+    let pad_zero s =
+      Seq.append (String.to_seq s) (Seq.return @@ Char.chr 0) |> String.of_seq
     in
     if len = 1 then Option.some @@ Common.Read.uint8 reader
     else if len = 2 then Option.some @@ Buf_read.LE.uint16 reader
-    else if len = 3 then get_uint @@ pad_front 1 value
+    else if len = 3 then get_uint @@ pad_zero value
     else if len = 4 then
       Option.some @@ Int32.to_int @@ Buf_read.LE.uint32 reader
-    else if len = 5 then get_uint @@ pad_front 1 value
+    else if len = 5 then get_uint @@ pad_zero value
     else if len = 6 then
       Option.some @@ Int64.to_int @@ Buf_read.LE.uint48 reader
-    else if len = 7 then get_uint @@ pad_front 1 value
+    else if len = 7 then get_uint @@ pad_zero value
     else if len = 8 then
       Option.some @@ Int64.to_int @@ Buf_read.LE.uint64 reader
     else None
@@ -326,6 +327,12 @@ type t = {
   payload : string option;
 }
 
+let equal a b =
+  Code.equal a.code b.code
+  && Option.equal Int.equal a.token b.token
+  && List.equal Options.equal a.options b.options
+  && Option.equal String.equal a.payload b.payload
+
 let code t = t.code
 let token t = t.token
 let options t = t.options
@@ -353,7 +360,12 @@ let pp ppf =
 
 (* Constructor *)
 
-let make ~code ?token ~options payload = { code; token; options; payload }
+let make ~code ?token ~options payload =
+  (* empty string payload is not allowed *)
+  let payload =
+    match payload with Some p when String.length p = 0 -> None | _ -> payload
+  in
+  { code; token; options; payload }
 
 (* Parsers *)
 
