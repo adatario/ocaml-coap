@@ -23,6 +23,26 @@ module Common = struct
       let* upper_8 = uint8 in
       return Int.(logor (shift_left upper_8 16) lower_16)
 
+    let uint40 =
+      let open Syntax in
+      let* lower_32 = LE.uint32 in
+      let* upper_8 = uint8 in
+      return Int64.(logor (shift_left (of_int upper_8) 32) @@ of_int32 lower_32)
+
+    let uint48 =
+      let open Syntax in
+      let* lower_32 = LE.uint32 in
+      let* upper_16 = LE.uint16 in
+      return
+        Int64.(logor (shift_left (of_int upper_16) 32) @@ of_int32 lower_32)
+
+    let uint56 =
+      let open Syntax in
+      let* lower_32 = LE.uint32 in
+      let* upper_24 = uint24 in
+      return
+        Int64.(logor (shift_left (of_int upper_24) 32) @@ of_int32 lower_32)
+
     let some = map Option.some
     let none = return None
 
@@ -53,10 +73,9 @@ module Common = struct
       else if tkl = 2 then some (map Int64.of_int LE.uint16)
       else if tkl = 3 then some (map Int64.of_int uint24)
       else if tkl = 4 then some (map Int64.of_int32 LE.uint32)
-      else if tkl = 5 then failwith "TODO: parse 40 bit token"
-      else if tkl = 6 then some LE.uint48
-      else if tkl = 7 then failwith "TODO: parse 56 bit token"
-        (* TODO: token should probably be an Int64 *)
+      else if tkl = 5 then some uint40
+      else if tkl = 6 then some uint48
+      else if tkl = 7 then some uint56
       else if tkl = 8 then some LE.uint64
       else raise (FormatError "invalid token length")
   end
@@ -79,6 +98,24 @@ module Common = struct
       (* write upper 8 bits *)
       uint8 writer Int64.(to_int @@ shift_right_logical v 16)
 
+    let uint40 writer v =
+      (* write lower 32 bits *)
+      LE.uint32 writer Int64.(to_int32 v);
+      (* write upper 8 bits *)
+      uint8 writer Int64.(to_int @@ shift_right_logical v 32)
+
+    let uint48 writer v =
+      (* write lower 32 bits *)
+      LE.uint32 writer Int64.(to_int32 v);
+      (* write upper 8 bits *)
+      LE.uint16 writer Int64.(to_int @@ shift_right_logical v 32)
+
+    let uint56 writer v =
+      (* write lower 32 bits *)
+      LE.uint32 writer Int64.(to_int32 v);
+      (* write upper 8 bits *)
+      uint24 writer Int64.(shift_right_logical v 32)
+
     let token token =
       match token with
       | None -> (0, fun _ -> ())
@@ -90,6 +127,12 @@ module Common = struct
           (3, fun writer -> uint24 writer token)
       | Some token when token < Int64.(shift_left 1L 32) ->
           (4, fun writer -> LE.uint32 writer @@ Int64.to_int32 token)
+      | Some token when token < Int64.(shift_left 1L 40) ->
+          (5, fun writer -> uint40 writer token)
+      | Some token when token < Int64.(shift_left 1L 48) ->
+          (6, fun writer -> uint48 writer token)
+      | Some token when token < Int64.(shift_left 1L 56) ->
+          (7, fun writer -> uint56 writer token)
       | Some token -> (8, fun writer -> LE.uint64 writer @@ token)
 
     let to_string ~buffer_size f =
@@ -448,6 +491,9 @@ let write_framed writer message =
   (* initial byte *)
   let length_ib, length_extended = extended length in
   let token_ib, token = token message.token in
+
+  traceln "token_ib: %d" token_ib;
+
   let initial_byte = (length_ib lsl 4) lor token_ib in
   uint8 writer initial_byte;
 
