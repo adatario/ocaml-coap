@@ -57,8 +57,21 @@ module Message = struct
         QCheck.Gen.(
           map Coap.Message.Options.uri_path @@ small_list string_small)
 
+    let arbitrary_uri_query =
+      QCheck.make ~print:print_list ~shrink:QCheck.Shrink.list
+        QCheck.Gen.(
+          map Coap.Message.Options.uri_query @@ small_list string_small)
+
     let arbitrary =
-      QCheck.(choose [ (* no options *) always []; arbitrary_uri_path ])
+      QCheck.(
+        map List.concat @@ small_list
+        @@ choose
+             [
+               (* no options *)
+               always [];
+               arbitrary_uri_path;
+               arbitrary_uri_query;
+             ])
   end
 
   let arbitrary_payload = QCheck.(option string_printable)

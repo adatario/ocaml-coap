@@ -284,6 +284,9 @@ module Options = struct
 
   (* Writer *)
 
+  let stable_sort_by_number =
+    List.stable_sort (fun a b -> Int.compare a.number b.number)
+
   let write_1 writer current_number t =
     let open Buf_write in
     let open Common.Write in
@@ -303,9 +306,7 @@ module Options = struct
     match t.value with Some value -> string writer value | None -> ()
 
   let write writer options =
-    let sorted_options =
-      List.stable_sort (fun a b -> Int.compare a.number b.number) options
-    in
+    let sorted_options = stable_sort_by_number options in
     ignore
     @@ List.fold_left
          (fun current_number option ->
@@ -330,7 +331,9 @@ type t = {
 let equal a b =
   Code.equal a.code b.code
   && Option.equal Int.equal a.token b.token
-  && List.equal Options.equal a.options b.options
+  && List.equal Options.equal
+       (Options.stable_sort_by_number a.options)
+       (Options.stable_sort_by_number b.options)
   && Option.equal String.equal a.payload b.payload
 
 let code t = t.code
