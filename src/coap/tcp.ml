@@ -31,7 +31,6 @@ module Signaling = struct
 
   let handler t msg =
     ignore t;
-    traceln "Signaling.handler: %a" Message.pp msg;
     if Message.Code.equal (Message.code msg) Code.csm then (
       (* Set max_message_size *)
       Message.Options.filter_map_values ~number:2 Message.Options.get_uint
