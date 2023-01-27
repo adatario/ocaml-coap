@@ -63,6 +63,9 @@ module Message = struct
           map Coap.Message.Options.uri_query @@ small_list string_small)
 
     let arbitrary =
+      ignore arbitrary_uri_path;
+      ignore arbitrary_uri_query;
+
       QCheck.(
         map List.concat @@ small_list
         @@ choose
@@ -75,7 +78,7 @@ module Message = struct
   end
 
   let arbitrary_payload = QCheck.(option string_printable)
-  let arbitrary_token = QCheck.(option pos_int)
+  let arbitrary_token = QCheck.(option (map Int64.abs int64))
 
   let arbitrary =
     QCheck.(

@@ -16,6 +16,13 @@ module Common = struct
     open Buf_read
 
     let uint8 = map Char.code any_char
+
+    let uint24 =
+      let open Syntax in
+      let* lower_16 = LE.uint16 in
+      let* upper_8 = uint8 in
+      return Int.(logor (shift_left upper_8 16) lower_16)
+
     let some = map Option.some
     let none = return None
 
@@ -40,16 +47,17 @@ module Common = struct
       | parser, byte_count -> Some (parser, byte_count)
 
     let token tkl =
+      traceln "token: %d" tkl;
       if tkl = 0 then return None
-      else if tkl = 1 then some uint8
-      else if tkl = 2 then some LE.uint16
-      else if tkl = 3 then failwith "TODO: parser 24 bit token"
-      else if tkl = 4 then some (map Int32.to_int LE.uint32)
+      else if tkl = 1 then some (map Int64.of_int uint8)
+      else if tkl = 2 then some (map Int64.of_int LE.uint16)
+      else if tkl = 3 then some (map Int64.of_int uint24)
+      else if tkl = 4 then some (map Int64.of_int32 LE.uint32)
       else if tkl = 5 then failwith "TODO: parse 40 bit token"
-      else if tkl = 6 then some (map Int64.to_int LE.uint48)
+      else if tkl = 6 then some LE.uint48
       else if tkl = 7 then failwith "TODO: parse 56 bit token"
         (* TODO: token should probably be an Int64 *)
-      else if tkl = 8 then some (map Int64.to_int LE.uint64)
+      else if tkl = 8 then some LE.uint64
       else raise (FormatError "invalid token length")
   end
 
@@ -65,15 +73,24 @@ module Common = struct
         (15, fun writer -> LE.uint32 writer @@ Int32.of_int (value - 65805))
       else failwith "invalid extended value (too large)"
 
+    let uint24 writer v =
+      (* write lower 16 bits *)
+      LE.uint16 writer Int64.(to_int v);
+      (* write upper 8 bits *)
+      uint8 writer Int64.(to_int @@ shift_right_logical v 16)
+
     let token token =
       match token with
       | None -> (0, fun _ -> ())
-      | Some token when token < 256 -> (1, fun writer -> uint8 writer token)
-      | Some token when token < 65536 ->
-          (2, fun writer -> LE.uint16 writer token)
-      | Some token when token < 1 lsl 31 ->
-          (4, fun writer -> LE.uint32 writer @@ Int32.of_int token)
-      | Some token -> (8, fun writer -> LE.uint64 writer @@ Int64.of_int token)
+      | Some token when token < 256L ->
+          (1, fun writer -> uint8 writer @@ Int64.to_int token)
+      | Some token when token < 65536L ->
+          (2, fun writer -> LE.uint16 writer @@ Int64.to_int token)
+      | Some token when token < Int64.(shift_left 1L 24) ->
+          (3, fun writer -> uint24 writer token)
+      | Some token when token < Int64.(shift_left 1L 32) ->
+          (4, fun writer -> LE.uint32 writer @@ Int64.to_int32 token)
+      | Some token -> (8, fun writer -> LE.uint64 writer @@ token)
 
     let to_string ~buffer_size f =
       let buffer = Buffer.create buffer_size in
@@ -97,6 +114,7 @@ module Code = struct
     if class' < 8 && detail < 32 then (class' lsl 5) lor detail
     else raise (Invalid_argument "invalid class or detail")
 
+  let empty = make 0 0
   let get = make 0 1
   let post = make 0 2
   let put = make 0 3
@@ -323,14 +341,14 @@ type t = {
   (* TCP CoAP does not have a type. TODO add for UDP *)
   (* type' : int; *)
   code : Code.t;
-  token : int option;
+  token : int64 option;
   options : Options.t list;
   payload : string option;
 }
 
 let equal a b =
   Code.equal a.code b.code
-  && Option.equal Int.equal a.token b.token
+  && Option.equal Int64.equal a.token b.token
   && List.equal Options.equal
        (Options.stable_sort_by_number a.options)
        (Options.stable_sort_by_number b.options)
@@ -350,7 +368,7 @@ let pp ppf =
            field "code" (fun m -> m.code) Code.pp;
            field "token"
              (fun m -> m.token)
-             (option ~none:(styled `Faint @@ any "None") int);
+             (option ~none:(styled `Faint @@ any "None") int64);
            field "options"
              (fun m -> m.options)
              (brackets @@ vbox @@ list ~sep:semi Options.pp);

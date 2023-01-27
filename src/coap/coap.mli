@@ -39,6 +39,10 @@ module Message : sig
     (** [make class' detail] returns the code with class [class'] and
         detail [detail]. *)
 
+    (** {2 Empty} *)
+
+    val empty : t
+
     (** {2 Request} *)
 
     val get : t
@@ -153,7 +157,7 @@ module Message : sig
 
   val equal : t -> t -> bool
   val code : t -> Code.t
-  val token : t -> int option
+  val token : t -> int64 option
   val options : t -> Options.t list
   val payload : t -> string option
   val pp : t Fmt.t
@@ -161,7 +165,7 @@ module Message : sig
   (** {1 Constructor} *)
 
   val make :
-    code:Code.t -> ?token:int -> options:Options.t list -> string option -> t
+    code:Code.t -> ?token:int64 -> options:Options.t list -> string option -> t
 
   (** {1 Parsers} *)
 

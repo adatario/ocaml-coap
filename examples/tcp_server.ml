@@ -14,11 +14,16 @@ let handler session message =
   let path = Coap.Message.(Options.get_uri_path @@ options message) in
   traceln "Uri-Path: %a" Fmt.(list ~sep:(any "/") string) path;
 
-  let response =
-    Coap.Message.(make ~code:Code.content ~options:[] (Some "Hi coap-client!"))
-  in
+  if Coap.Message.(Code.equal Code.empty @@ code message) then traceln "empty"
+  else
+    let response =
+      Coap.Message.(
+        make ~code:Code.content ?token:(token message) ~options:[]
+          (Some "Hi coap-client!"))
+    in
+    traceln "SEND: %a" Coap.Message.pp response;
 
-  Coap.Tcp.send session response
+    Coap.Tcp.send session response
 
 let listen ~net ~sw () =
   let listen_socket =
