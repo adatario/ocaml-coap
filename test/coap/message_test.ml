@@ -50,17 +50,18 @@ module Message = struct
 
   module Option = struct
     (* let print = Fmt.to_to_string Coap.Message.Option.pp *)
-    let print_list = Fmt.(to_to_string @@ list Coap.Message.Option.pp)
+    let print_list = Fmt.(to_to_string @@ list Coap.Message.Options.pp)
 
     let arbitrary_uri_path =
       QCheck.make ~print:print_list ~shrink:QCheck.Shrink.list
-        QCheck.Gen.(map Coap.Message.Option.uri_path @@ small_list string_small)
+        QCheck.Gen.(
+          map Coap.Message.Options.uri_path @@ small_list string_small)
 
     let arbitrary =
       QCheck.(choose [ (* no options *) always []; arbitrary_uri_path ])
   end
 
-  let arbitrary_payload = QCheck.(option ~ratio:0.0 string_printable)
+  let arbitrary_payload = QCheck.(option string_printable)
 
   let arbitrary =
     QCheck.(

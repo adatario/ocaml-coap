@@ -83,7 +83,7 @@ module Message : sig
     val pp : t Fmt.t
   end
 
-  module Option : sig
+  module Options : sig
     type t
 
     val number : t -> int
@@ -152,14 +152,14 @@ module Message : sig
 
   val code : t -> Code.t
   val token : t -> int option
-  val options : t -> Option.t list
+  val options : t -> Options.t list
   val payload : t -> string option
   val pp : t Fmt.t
 
   (** {1 Constructor} *)
 
   val make :
-    code:Code.t -> ?token:int -> options:Option.t list -> string option -> t
+    code:Code.t -> ?token:int -> options:Options.t list -> string option -> t
 
   (** {1 Parsers} *)
 

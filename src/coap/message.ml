@@ -125,7 +125,7 @@ module Code = struct
   let pp f t = Fmt.pf f "%d.%02d" (class' t) (detail t)
 end
 
-module Option = struct
+module Options = struct
   type t = { number : int; value : string option }
 
   let number t = t.number
@@ -322,7 +322,7 @@ type t = {
   (* type' : int; *)
   code : Code.t;
   token : int option;
-  options : Option.t list;
+  options : Options.t list;
   payload : string option;
 }
 
@@ -343,7 +343,7 @@ let pp ppf =
              (option ~none:(styled `Faint @@ any "None") int);
            field "options"
              (fun m -> m.options)
-             (brackets @@ vbox @@ list ~sep:semi Option.pp);
+             (brackets @@ vbox @@ list ~sep:semi Options.pp);
            field "payload"
              (fun o -> o.payload)
              (option
@@ -379,7 +379,7 @@ let parser_framed =
   let* token = token tkl in
 
   (* Options *)
-  let* options, consumed = Option.parser_many length in
+  let* options, consumed = Options.parser_many length in
 
   (* Payload *)
   let payload_length = length - consumed - 1 in
@@ -398,7 +398,7 @@ let parser _len = failwith "TODO"
 let write_framed writer message =
   let open Buf_write in
   let open Common.Write in
-  let options_s = Option.to_string message.options in
+  let options_s = Options.to_string message.options in
 
   let payload_length =
     Stdlib.Option.(

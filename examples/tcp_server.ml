@@ -11,7 +11,7 @@ let listen_addr = `Tcp (Net.Ipaddr.V4.loopback, 5683)
 let handler session message =
   traceln "RECV: %a" Coap.Message.pp message;
 
-  let path = Coap.Message.(Option.get_uri_path @@ options message) in
+  let path = Coap.Message.(Options.get_uri_path @@ options message) in
   traceln "Uri-Path: %a" Fmt.(list ~sep:(any "/") string) path;
 
   let response =

@@ -15,7 +15,9 @@ let client ~net ~sw () =
 
   let msg =
     Coap.Message.(
-      make ~code:Code.get ~options:(Option.uri_path [ "hi"; "ocaml-coap" ]) None)
+      make ~code:Code.get
+        ~options:(Options.uri_path [ "hi"; "ocaml-coap" ])
+        None)
   in
   Coap.Tcp.send connection msg;
 

@@ -34,7 +34,7 @@ module Signaling = struct
     traceln "Signaling.handler: %a" Message.pp msg;
     if Message.Code.equal (Message.code msg) Code.csm then (
       (* Set max_message_size *)
-      Message.Option.filter_map_values ~number:2 Message.Option.get_uint
+      Message.Options.filter_map_values ~number:2 Message.Options.get_uint
         msg.options
       |> List.iter (fun max_message_size ->
              t.remote_max_message_size <- Some max_message_size);
