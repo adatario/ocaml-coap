@@ -8,35 +8,10 @@ open Eio
 
 exception FormatError of string
 
-(** [extended_length l] reads the extended length if indicated by
-     [l] and returns a parser to read the extended length and number of
-     bytes that will be read. *)
-let read_extended_length l =
-  let open Buf_read in
-  if l <= 12 then (return l, 0)
-  else if l = 13 then (map (fun l -> l + 13) Uint.Read.uint8, 1)
-  else if l = 14 then (map (fun l -> l + 269) BE.uint16, 2)
-  else if l = 15 then
-    (* int handling on 32 bit machines where Int is 31 bit. *)
-    (map (fun l -> l + 65805) (map Int32.to_int BE.uint32), 4)
-  else
-    failwith
-      "internal error: extended_length expects an uint8 but was passed a \
-       larger integer"
-
 let read_option_length l =
-  match read_extended_length l with
+  match Extended.read l with
   | _, byte_count when byte_count = 4 -> None
   | parser, byte_count -> Some (parser, byte_count)
-
-let write_extended value =
-  let open Buf_write in
-  if value < 13 then (value, fun _ -> ())
-  else if value < 269 then (13, fun writer -> uint8 writer (value - 13))
-  else if value < 65805 then (14, fun writer -> BE.uint16 writer (value - 269))
-  else if value < 4295033101 then
-    (15, fun writer -> BE.uint32 writer @@ Int32.of_int (value - 65805))
-  else failwith "invalid extended value (too large)"
 
 let write_to_string ~buffer_size f =
   let buffer = Buffer.create buffer_size in
@@ -251,9 +226,9 @@ module Options = struct
   let write_1 writer current_number t =
     let open Buf_write in
     let delta = t.number - current_number in
-    let delta_ib, delta_extended = write_extended delta in
+    let delta_ib, delta_extended = Extended.writer delta in
     let length_ib, length_extended =
-      write_extended
+      Extended.writer
         Stdlib.Option.(map String.length t.value |> value ~default:0)
     in
 

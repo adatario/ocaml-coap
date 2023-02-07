@@ -59,7 +59,7 @@ let parser =
   traceln "Message.parser_framed - tkl: %d" tkl;
 
   (* Extended length (if any) *)
-  let length_parser, bytes_consumed = Message.read_extended_length ib_len in
+  let length_parser, bytes_consumed = Extended.read ib_len in
   let* length = length_parser in
   traceln "Message.parser_framed - length: %d, bytes_consumed: %d" length
     bytes_consumed;
@@ -109,7 +109,7 @@ let write writer (msg : Message.t) =
   let length = String.length options_s + payload_length in
 
   (* initial byte *)
-  let length_ib, length_extended = Message.write_extended length in
+  let length_ib, length_extended = Extended.writer length in
   let token_ib = String.length msg.token in
 
   let initial_byte = (length_ib lsl 4) lor token_ib in
