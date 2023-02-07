@@ -44,16 +44,12 @@ module Signaling = struct
 end
 
 let send t msg =
-  (* let msg_s = *)
-  (*   Message.Common.Write.to_string ~buffer_size:32 (fun writer -> *)
-  (*       Message.write_framed writer msg) *)
-  (* in *)
-
-  (* traceln "SEND bytes: %a" Fmt.(on_string @@ hex ()) msg_s; *)
   Buf_write.with_flow t.flow (fun writer -> Message.write_framed writer msg)
 
 let read_msg t =
-  traceln "Tcp - enter read_msg loop";
+  (* ignore @@ Buf_read.peek_char t.read_buffer; *)
+  (* traceln "Tcp.read_msg - buffer: %a" Cstruct.hexdump_pp *)
+  (* @@ Buf_read.peek t.read_buffer; *)
   match Message.parser_framed t.read_buffer with
   | msg -> Some msg
   | exception End_of_file -> None

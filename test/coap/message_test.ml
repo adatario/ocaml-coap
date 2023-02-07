@@ -67,7 +67,8 @@ module Message = struct
       ignore arbitrary_uri_query;
 
       QCheck.(
-        map List.concat @@ small_list
+        map ~rev:List.(map @@ fun a -> [ a ]) List.concat
+        @@ small_list
         @@ choose
              [
                (* no options *)
@@ -78,7 +79,7 @@ module Message = struct
   end
 
   let arbitrary_payload = QCheck.(option string_printable)
-  let arbitrary_token = QCheck.(option (map Int64.abs int64))
+  let arbitrary_token = QCheck.(string_of_size (Gen.return 4))
 
   let arbitrary =
     QCheck.(
@@ -86,7 +87,8 @@ module Message = struct
         ~rev:(fun msg ->
           Coap.Message.(code msg, token msg, options msg, payload msg))
         (fun (code, token, options, payload) ->
-          Coap.Message.make ~code ?token ~options payload)
+          traceln "payload: %a" Fmt.(option string) payload;
+          Coap.Message.make ~code ~token ~options payload)
       @@ tup4 Code.arbitrary arbitrary_token Option.arbitrary arbitrary_payload)
 
   let testable = Alcotest.testable Coap.Message.pp Coap.Message.equal
@@ -105,6 +107,8 @@ let test_framed =
         write_to_string ~buffer_size:64 (fun writer ->
             Coap.Message.write_framed writer msg)
       in
+
+      Format.printf "Message: %a" Coap.Message.pp msg;
 
       let reader =
         Buf_read.of_flow ~max_size:1000000 @@ Flow.string_source msg_s
