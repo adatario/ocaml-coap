@@ -30,14 +30,12 @@ module Signaling = struct
   (* Handler *)
 
   let handler t msg =
-    traceln "Tcp.Signaling.handler: %a" Message.pp msg;
+    (* traceln "Tcp.Signaling.handler: %a" Message.pp msg; *)
     if Message.Code.equal (Message.code msg) Code.csm then (
       (* Set max_message_size *)
       Message.Options.filter_map_values ~number:2 Message.Options.get_uint
         msg.options
       |> List.iter (fun max_message_size ->
-             traceln "Tcp.Signaling.handler - setting max_message_size to %d"
-               max_message_size;
              t.remote_max_message_size <- Some max_message_size);
       ())
     else ()
@@ -50,39 +48,44 @@ let parser =
   let open Buf_read.Syntax in
   (* Initial byte *)
   let* initial_byte = Uint.Read.uint8 in
-  traceln "Message.parser_framed - initial_byte: %d" initial_byte;
 
+  (* traceln "Message.parser_framed - initial_byte: %d" initial_byte; *)
   let ib_len = initial_byte lsr 4 in
-  traceln "Message.parser_framed - ib_len: %d" ib_len;
 
+  (* traceln "Message.parser_framed - ib_len: %d" ib_len; *)
   let tkl = initial_byte land 0xf in
-  traceln "Message.parser_framed - tkl: %d" tkl;
+
+  (* traceln "Message.parser_framed - tkl: %d" tkl; *)
 
   (* Extended length (if any) *)
-  let length_parser, bytes_consumed = Extended.read ib_len in
+  let length_parser, _bytes_consumed = Extended.read ib_len in
   let* length = length_parser in
-  traceln "Message.parser_framed - length: %d, bytes_consumed: %d" length
-    bytes_consumed;
+
+  (* traceln "Message.parser_framed - length: %d, bytes_consumed: %d" length *)
+  (* bytes_consumed; *)
 
   (* Code *)
   let* code = Uint.Read.uint8 in
-  traceln "Message.parser_framed - code: %d" code;
+
+  (* traceln "Message.parser_framed - code: %d" code; *)
 
   (* Token (if any) *)
   let* token = take tkl in
-  traceln "Message.parser_framed - token: %a" Message.token_pp token;
+
+  (* traceln "Message.parser_framed - token: %a" Message.token_pp token; *)
 
   (* Options *)
   let* options, consumed = Message.Options.parser_many length in
-  traceln "Message.parser_framed - options: %a"
-    Fmt.(list Message.Options.pp)
-    options;
-  traceln "Message.parser_framed - consumed: %d" consumed;
+
+  (* traceln "Message.parser_framed - options: %a" *)
+  (*   Fmt.(list Message.Options.pp) *)
+  (*   options; *)
+  (* traceln "Message.parser_framed - consumed: %d" consumed; *)
 
   (* Payload *)
   let payload_length = length - consumed - 1 in
-  traceln "Message.parser_framed - payload_length: %d" payload_length;
 
+  (* traceln "Message.parser_framed - payload_length: %d" payload_length; *)
   let* payload =
     if payload_length > 0 then map Stdlib.Option.some (take payload_length)
     else return None
@@ -154,7 +157,7 @@ let init ?max_message_size flow =
   (* At the start of transport connection a CSM message must be sent
      and is expected (see https://www.rfc-editor.org/rfc/rfc8323#section-5.3) *)
   let my_csm = Message.make ~code:Signaling.Code.csm ~options:[] None in
-  traceln "Tcp.init - sent CSM";
+  (* traceln "Tcp.init - sent CSM"; *)
   send t my_csm;
 
   t

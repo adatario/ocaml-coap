@@ -299,7 +299,6 @@ let pp ppf =
 (* Constructor *)
 
 let make ~code ?(token = "") ~options payload =
-  traceln "Message.make - payload: %a" Fmt.(option string) payload;
   (* empty string payload is not allowed *)
   let payload =
     match payload with Some p when String.length p = 0 -> None | _ -> payload
