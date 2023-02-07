@@ -8,19 +8,13 @@ open Eio
 
 exception FormatError of string
 
-(* Helpers *)
-
-let read_uint8 =
-  let open Buf_read in
-  map Char.code any_char
-
 (** [extended_length l] reads the extended length if indicated by
      [l] and returns a parser to read the extended length and number of
      bytes that will be read. *)
 let read_extended_length l =
   let open Buf_read in
   if l <= 12 then (return l, 0)
-  else if l = 13 then (map (fun l -> l + 13) read_uint8, 1)
+  else if l = 13 then (map (fun l -> l + 13) Uint.Read.uint8, 1)
   else if l = 14 then (map (fun l -> l + 269) BE.uint16, 2)
   else if l = 15 then
     (* int handling on 32 bit machines where Int is 31 bit. *)
@@ -48,97 +42,6 @@ let write_to_string ~buffer_size f =
   let buffer = Buffer.create buffer_size in
   Buf_write.with_flow (Flow.buffer_sink buffer) (fun writer -> f writer);
   Buffer.to_bytes buffer |> Bytes.to_string
-
-(* module Common = struct *)
-
-(*   module Read = struct *)
-(*     (\* let uint24 = *\) *)
-(*     (\*   let open Syntax in *\) *)
-(*     (\*   let* lower_16 = LE.uint16 in *\) *)
-(*     (\*   let* upper_8 = uint8 in *\) *)
-(*     (\*   return Int.(logor (shift_left upper_8 16) lower_16) *\) *)
-
-(*     (\* let uint40 = *\) *)
-(*     (\*   let open Syntax in *\) *)
-(*     (\*   let* lower_32 = LE.uint32 in *\) *)
-(*     (\*   let* upper_8 = uint8 in *\) *)
-(*     (\*   return Int64.(logor (shift_left (of_int upper_8) 32) @@ of_int32 lower_32) *\) *)
-
-(*     (\* let uint48 = *\) *)
-(*     (\*   let open Syntax in *\) *)
-(*     (\*   let* lower_32 = LE.uint32 in *\) *)
-(*     (\*   let* upper_16 = LE.uint16 in *\) *)
-(*     (\*   return *\) *)
-(*     (\*     Int64.(logor (shift_left (of_int upper_16) 32) @@ of_int32 lower_32) *\) *)
-
-(*     (\* let uint56 = *\) *)
-(*     (\*   let open Syntax in *\) *)
-(*     (\*   let* lower_32 = LE.uint32 in *\) *)
-(*     (\*   let* upper_24 = uint24 in *\) *)
-(*     (\*   return *\) *)
-(*     (\*     Int64.(logor (shift_left (of_int upper_24) 32) @@ of_int32 lower_32) *\) *)
-
-(*     (\* let some = Buf_read.map Option.some *\) *)
-(*     (\* let none = Buf_read.return None *\) *)
-
-(*     (\* let token tkl = *\) *)
-(*     (\*   if tkl = 0 then return None *\) *)
-(*     (\*   else if tkl = 1 then some (map Int64.of_int uint8) *\) *)
-(*     (\*   else if tkl = 2 then some (map Int64.of_int LE.uint16) *\) *)
-(*     (\*   else if tkl = 3 then some (map Int64.of_int uint24) *\) *)
-(*     (\*   else if tkl = 4 then some (map Int64.of_int32 LE.uint32) *\) *)
-(*     (\*   else if tkl = 5 then some uint40 *\) *)
-(*     (\*   else if tkl = 6 then some uint48 *\) *)
-(*     (\*   else if tkl = 7 then some uint56 *\) *)
-(*     (\*   else if tkl = 8 then some LE.uint64 *\) *)
-(*     (\*   else raise (FormatError "invalid token length") *\) *)
-(*   end *)
-
-(*   module Write = struct *)
-(*     (\* let uint24 writer v = *\) *)
-(*     (\*   (\\* write lower 16 bits *\\) *\) *)
-(*     (\*   LE.uint16 writer Int64.(to_int v); *\) *)
-(*     (\*   (\\* write upper 8 bits *\\) *\) *)
-(*     (\*   uint8 writer Int64.(to_int @@ shift_right_logical v 16) *\) *)
-
-(*     (\* let uint40 writer v = *\) *)
-(*     (\*   (\\* write lower 32 bits *\\) *\) *)
-(*     (\*   LE.uint32 writer Int64.(to_int32 v); *\) *)
-(*     (\*   (\\* write upper 8 bits *\\) *\) *)
-(*     (\*   uint8 writer Int64.(to_int @@ shift_right_logical v 32) *\) *)
-
-(*     (\* let uint48 writer v = *\) *)
-(*     (\*   (\\* write lower 32 bits *\\) *\) *)
-(*     (\*   LE.uint32 writer Int64.(to_int32 v); *\) *)
-(*     (\*   (\\* write upper 8 bits *\\) *\) *)
-(*     (\*   LE.uint16 writer Int64.(to_int @@ shift_right_logical v 32) *\) *)
-
-(*     (\* let uint56 writer v = *\) *)
-(*     (\*   (\\* write lower 32 bits *\\) *\) *)
-(*     (\*   LE.uint32 writer Int64.(to_int32 v); *\) *)
-(*     (\*   (\\* write upper 8 bits *\\) *\) *)
-(*     (\*   uint24 writer Int64.(shift_right_logical v 32) *\) *)
-
-(*     (\* let token token = *\) *)
-(*     (\*   match token with *\) *)
-(*     (\*   | None -> (0, fun _ -> ()) *\) *)
-(*     (\*   | Some token when token < 256L -> *\) *)
-(*     (\*       (1, fun writer -> uint8 writer @@ Int64.to_int token) *\) *)
-(*     (\*   | Some token when token < 65536L -> *\) *)
-(*     (\*       (2, fun writer -> LE.uint16 writer @@ Int64.to_int token) *\) *)
-(*     (\*   | Some token when token < Int64.(shift_left 1L 24) -> *\) *)
-(*     (\*       (3, fun writer -> uint24 writer token) *\) *)
-(*     (\*   | Some token when token < Int64.(shift_left 1L 32) -> *\) *)
-(*     (\*       (4, fun writer -> LE.uint32 writer @@ Int64.to_int32 token) *\) *)
-(*     (\*   | Some token when token < Int64.(shift_left 1L 40) -> *\) *)
-(*     (\*       (5, fun writer -> uint40 writer token) *\) *)
-(*     (\*   | Some token when token < Int64.(shift_left 1L 48) -> *\) *)
-(*     (\*       (6, fun writer -> uint48 writer token) *\) *)
-(*     (\*   | Some token when token < Int64.(shift_left 1L 56) -> *\) *)
-(*     (\*       (7, fun writer -> uint56 writer token) *\) *)
-(*     (\*   | Some token -> (8, fun writer -> LE.uint64 writer @@ token) *\) *)
-(*   end *)
-(* end *)
 
 (* type type' = Confirmable | Nonconfirmable | Acknowledgement | Reset *)
 
@@ -226,7 +129,7 @@ module Options = struct
     let pad_zero s =
       Seq.append (String.to_seq s) (Seq.return @@ Char.chr 0) |> String.of_seq
     in
-    if len = 1 then Option.some @@ read_uint8 reader
+    if len = 1 then Option.some @@ Uint.Read.uint8 reader
     else if len = 2 then Option.some @@ Buf_read.BE.uint16 reader
     else if len = 3 then get_uint @@ pad_zero value
     else if len = 4 then
@@ -260,7 +163,7 @@ module Options = struct
     filter_map_values ~number:7
       (fun value ->
         if String.length value = 1 then
-          Some Buf_read.(parse_string_exn read_uint8 value)
+          Some Buf_read.(parse_string_exn Uint.Read.uint8 value)
         else if String.length value = 2 then
           Some Buf_read.(parse_string_exn Buf_read.BE.uint16 value)
         else None)
@@ -293,7 +196,7 @@ module Options = struct
     let open Buf_read in
     let open Buf_read.Syntax in
     (* Initial byte *)
-    let* initial_byte = read_uint8 in
+    let* initial_byte = Uint.Read.uint8 in
     let ib_delta = (initial_byte land 0b11110000) lsr 4 in
     let ib_value_len = initial_byte land 0b00001111 in
 

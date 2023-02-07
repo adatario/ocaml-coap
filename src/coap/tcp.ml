@@ -49,7 +49,7 @@ let parser =
   let open Buf_read in
   let open Buf_read.Syntax in
   (* Initial byte *)
-  let* initial_byte = Message.read_uint8 in
+  let* initial_byte = Uint.Read.uint8 in
   traceln "Message.parser_framed - initial_byte: %d" initial_byte;
 
   let ib_len = initial_byte lsr 4 in
@@ -65,7 +65,7 @@ let parser =
     bytes_consumed;
 
   (* Code *)
-  let* code = Message.read_uint8 in
+  let* code = Uint.Read.uint8 in
   traceln "Message.parser_framed - code: %d" code;
 
   (* Token (if any) *)
