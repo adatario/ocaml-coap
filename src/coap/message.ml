@@ -13,43 +13,44 @@ module Common = struct
      many places. *)
 
   module Read = struct
-    open Buf_read
+    let uint8 =
+      let open Buf_read in
+      map Char.code any_char
 
-    let uint8 = map Char.code any_char
+    (* let uint24 = *)
+    (*   let open Syntax in *)
+    (*   let* lower_16 = LE.uint16 in *)
+    (*   let* upper_8 = uint8 in *)
+    (*   return Int.(logor (shift_left upper_8 16) lower_16) *)
 
-    let uint24 =
-      let open Syntax in
-      let* lower_16 = LE.uint16 in
-      let* upper_8 = uint8 in
-      return Int.(logor (shift_left upper_8 16) lower_16)
+    (* let uint40 = *)
+    (*   let open Syntax in *)
+    (*   let* lower_32 = LE.uint32 in *)
+    (*   let* upper_8 = uint8 in *)
+    (*   return Int64.(logor (shift_left (of_int upper_8) 32) @@ of_int32 lower_32) *)
 
-    let uint40 =
-      let open Syntax in
-      let* lower_32 = LE.uint32 in
-      let* upper_8 = uint8 in
-      return Int64.(logor (shift_left (of_int upper_8) 32) @@ of_int32 lower_32)
+    (* let uint48 = *)
+    (*   let open Syntax in *)
+    (*   let* lower_32 = LE.uint32 in *)
+    (*   let* upper_16 = LE.uint16 in *)
+    (*   return *)
+    (*     Int64.(logor (shift_left (of_int upper_16) 32) @@ of_int32 lower_32) *)
 
-    let uint48 =
-      let open Syntax in
-      let* lower_32 = LE.uint32 in
-      let* upper_16 = LE.uint16 in
-      return
-        Int64.(logor (shift_left (of_int upper_16) 32) @@ of_int32 lower_32)
+    (* let uint56 = *)
+    (*   let open Syntax in *)
+    (*   let* lower_32 = LE.uint32 in *)
+    (*   let* upper_24 = uint24 in *)
+    (*   return *)
+    (*     Int64.(logor (shift_left (of_int upper_24) 32) @@ of_int32 lower_32) *)
 
-    let uint56 =
-      let open Syntax in
-      let* lower_32 = LE.uint32 in
-      let* upper_24 = uint24 in
-      return
-        Int64.(logor (shift_left (of_int upper_24) 32) @@ of_int32 lower_32)
-
-    let some = map Option.some
-    let none = return None
+    (* let some = Buf_read.map Option.some *)
+    (* let none = Buf_read.return None *)
 
     (** [extended_length l] reads the extended length if indicated by
      [l] and returns a parser to read the extended length and number of
      bytes that will be read. *)
     let extended_length l =
+      let open Buf_read in
       if l <= 12 then (return l, 0)
       else if l = 13 then (map (fun l -> l + 13) uint8, 1)
       else if l = 14 then (map (fun l -> l + 269) LE.uint16, 2)
@@ -66,24 +67,22 @@ module Common = struct
       | _, byte_count when byte_count = 4 -> None
       | parser, byte_count -> Some (parser, byte_count)
 
-    let token tkl =
-      traceln "token: %d" tkl;
-      if tkl = 0 then return None
-      else if tkl = 1 then some (map Int64.of_int uint8)
-      else if tkl = 2 then some (map Int64.of_int LE.uint16)
-      else if tkl = 3 then some (map Int64.of_int uint24)
-      else if tkl = 4 then some (map Int64.of_int32 LE.uint32)
-      else if tkl = 5 then some uint40
-      else if tkl = 6 then some uint48
-      else if tkl = 7 then some uint56
-      else if tkl = 8 then some LE.uint64
-      else raise (FormatError "invalid token length")
+    (* let token tkl = *)
+    (*   if tkl = 0 then return None *)
+    (*   else if tkl = 1 then some (map Int64.of_int uint8) *)
+    (*   else if tkl = 2 then some (map Int64.of_int LE.uint16) *)
+    (*   else if tkl = 3 then some (map Int64.of_int uint24) *)
+    (*   else if tkl = 4 then some (map Int64.of_int32 LE.uint32) *)
+    (*   else if tkl = 5 then some uint40 *)
+    (*   else if tkl = 6 then some uint48 *)
+    (*   else if tkl = 7 then some uint56 *)
+    (*   else if tkl = 8 then some LE.uint64 *)
+    (*   else raise (FormatError "invalid token length") *)
   end
 
   module Write = struct
-    open Buf_write
-
     let extended value =
+      let open Buf_write in
       if value < 13 then (value, fun _ -> ())
       else if value < 269 then (13, fun writer -> uint8 writer (value - 13))
       else if value < 65805 then
@@ -92,52 +91,52 @@ module Common = struct
         (15, fun writer -> LE.uint32 writer @@ Int32.of_int (value - 65805))
       else failwith "invalid extended value (too large)"
 
-    let uint24 writer v =
-      (* write lower 16 bits *)
-      LE.uint16 writer Int64.(to_int v);
-      (* write upper 8 bits *)
-      uint8 writer Int64.(to_int @@ shift_right_logical v 16)
+    (* let uint24 writer v = *)
+    (*   (\* write lower 16 bits *\) *)
+    (*   LE.uint16 writer Int64.(to_int v); *)
+    (*   (\* write upper 8 bits *\) *)
+    (*   uint8 writer Int64.(to_int @@ shift_right_logical v 16) *)
 
-    let uint40 writer v =
-      (* write lower 32 bits *)
-      LE.uint32 writer Int64.(to_int32 v);
-      (* write upper 8 bits *)
-      uint8 writer Int64.(to_int @@ shift_right_logical v 32)
+    (* let uint40 writer v = *)
+    (*   (\* write lower 32 bits *\) *)
+    (*   LE.uint32 writer Int64.(to_int32 v); *)
+    (*   (\* write upper 8 bits *\) *)
+    (*   uint8 writer Int64.(to_int @@ shift_right_logical v 32) *)
 
-    let uint48 writer v =
-      (* write lower 32 bits *)
-      LE.uint32 writer Int64.(to_int32 v);
-      (* write upper 8 bits *)
-      LE.uint16 writer Int64.(to_int @@ shift_right_logical v 32)
+    (* let uint48 writer v = *)
+    (*   (\* write lower 32 bits *\) *)
+    (*   LE.uint32 writer Int64.(to_int32 v); *)
+    (*   (\* write upper 8 bits *\) *)
+    (*   LE.uint16 writer Int64.(to_int @@ shift_right_logical v 32) *)
 
-    let uint56 writer v =
-      (* write lower 32 bits *)
-      LE.uint32 writer Int64.(to_int32 v);
-      (* write upper 8 bits *)
-      uint24 writer Int64.(shift_right_logical v 32)
+    (* let uint56 writer v = *)
+    (*   (\* write lower 32 bits *\) *)
+    (*   LE.uint32 writer Int64.(to_int32 v); *)
+    (*   (\* write upper 8 bits *\) *)
+    (*   uint24 writer Int64.(shift_right_logical v 32) *)
 
-    let token token =
-      match token with
-      | None -> (0, fun _ -> ())
-      | Some token when token < 256L ->
-          (1, fun writer -> uint8 writer @@ Int64.to_int token)
-      | Some token when token < 65536L ->
-          (2, fun writer -> LE.uint16 writer @@ Int64.to_int token)
-      | Some token when token < Int64.(shift_left 1L 24) ->
-          (3, fun writer -> uint24 writer token)
-      | Some token when token < Int64.(shift_left 1L 32) ->
-          (4, fun writer -> LE.uint32 writer @@ Int64.to_int32 token)
-      | Some token when token < Int64.(shift_left 1L 40) ->
-          (5, fun writer -> uint40 writer token)
-      | Some token when token < Int64.(shift_left 1L 48) ->
-          (6, fun writer -> uint48 writer token)
-      | Some token when token < Int64.(shift_left 1L 56) ->
-          (7, fun writer -> uint56 writer token)
-      | Some token -> (8, fun writer -> LE.uint64 writer @@ token)
+    (* let token token = *)
+    (*   match token with *)
+    (*   | None -> (0, fun _ -> ()) *)
+    (*   | Some token when token < 256L -> *)
+    (*       (1, fun writer -> uint8 writer @@ Int64.to_int token) *)
+    (*   | Some token when token < 65536L -> *)
+    (*       (2, fun writer -> LE.uint16 writer @@ Int64.to_int token) *)
+    (*   | Some token when token < Int64.(shift_left 1L 24) -> *)
+    (*       (3, fun writer -> uint24 writer token) *)
+    (*   | Some token when token < Int64.(shift_left 1L 32) -> *)
+    (*       (4, fun writer -> LE.uint32 writer @@ Int64.to_int32 token) *)
+    (*   | Some token when token < Int64.(shift_left 1L 40) -> *)
+    (*       (5, fun writer -> uint40 writer token) *)
+    (*   | Some token when token < Int64.(shift_left 1L 48) -> *)
+    (*       (6, fun writer -> uint48 writer token) *)
+    (*   | Some token when token < Int64.(shift_left 1L 56) -> *)
+    (*       (7, fun writer -> uint56 writer token) *)
+    (*   | Some token -> (8, fun writer -> LE.uint64 writer @@ token) *)
 
     let to_string ~buffer_size f =
       let buffer = Buffer.create buffer_size in
-      with_flow (Flow.buffer_sink buffer) (fun writer -> f writer);
+      Buf_write.with_flow (Flow.buffer_sink buffer) (fun writer -> f writer);
       Buffer.to_bytes buffer |> Bytes.to_string
   end
 end
@@ -384,14 +383,14 @@ type t = {
   (* TCP CoAP does not have a type. TODO add for UDP *)
   (* type' : int; *)
   code : Code.t;
-  token : int64 option;
+  token : string;
   options : Options.t list;
   payload : string option;
 }
 
 let equal a b =
   Code.equal a.code b.code
-  && Option.equal Int64.equal a.token b.token
+  && String.equal a.token b.token
   && List.equal Options.equal
        (Options.stable_sort_by_number a.options)
        (Options.stable_sort_by_number b.options)
@@ -401,6 +400,7 @@ let code t = t.code
 let token t = t.token
 let options t = t.options
 let payload t = t.payload
+let token_pp = Fmt.(on_string @@ octets ())
 
 let pp ppf =
   Fmt.(
@@ -409,9 +409,7 @@ let pp ppf =
          [
            (* field "type" (fun m -> m.type') int; *)
            field "code" (fun m -> m.code) Code.pp;
-           field "token"
-             (fun m -> m.token)
-             (option ~none:(styled `Faint @@ any "None") int64);
+           field "token" (fun m -> m.token) token_pp;
            field "options"
              (fun m -> m.options)
              (brackets @@ vbox @@ list ~sep:semi Options.pp);
@@ -424,7 +422,7 @@ let pp ppf =
 
 (* Constructor *)
 
-let make ~code ?token ~options payload =
+let make ~code ?(token = "") ~options payload =
   (* empty string payload is not allowed *)
   let payload =
     match payload with Some p when String.length p = 0 -> None | _ -> payload
@@ -439,20 +437,26 @@ let parser_framed =
   let open Common.Read in
   (* Initial byte *)
   let* initial_byte = uint8 in
+  traceln "Message.parser_framed - initial_byte: %d" initial_byte;
 
   let ib_len = initial_byte lsr 4 in
+  traceln "Message.parser_framed - ib_len: %d" ib_len;
 
   let tkl = initial_byte land 0xf in
+  traceln "Message.parser_framed - tkl: %d" tkl;
 
   (* Extended length (if any) *)
   let length_parser, _bytes_consumed = extended_length ib_len in
   let* length = length_parser in
+  traceln "Message.parser_framed - length: %d" length;
 
   (* Code *)
   let* code = uint8 in
+  traceln "Message.parser_framed - code: %d" code;
 
   (* Token (if any) *)
-  let* token = token tkl in
+  let* token = take tkl in
+  traceln "Message.parser_framed - token: %a" token_pp token;
 
   (* Options *)
   let* options, consumed = Options.parser_many length in
@@ -490,16 +494,14 @@ let write_framed writer message =
 
   (* initial byte *)
   let length_ib, length_extended = extended length in
-  let token_ib, token = token message.token in
-
-  traceln "token_ib: %d" token_ib;
+  let token_ib = String.length message.token in
 
   let initial_byte = (length_ib lsl 4) lor token_ib in
   uint8 writer initial_byte;
 
   length_extended writer;
   uint8 writer message.code;
-  token writer;
+  string writer message.token;
 
   string writer options_s;
 

@@ -157,7 +157,7 @@ module Message : sig
 
   val equal : t -> t -> bool
   val code : t -> Code.t
-  val token : t -> int64 option
+  val token : t -> string
   val options : t -> Options.t list
   val payload : t -> string option
   val pp : t Fmt.t
@@ -165,7 +165,7 @@ module Message : sig
   (** {1 Constructor} *)
 
   val make :
-    code:Code.t -> ?token:int64 -> options:Options.t list -> string option -> t
+    code:Code.t -> ?token:string -> options:Options.t list -> string option -> t
 
   (** {1 Parsers} *)
 

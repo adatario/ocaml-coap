@@ -18,7 +18,7 @@ let handler session message =
   else
     let response =
       Coap.Message.(
-        make ~code:Code.content ?token:(token message) ~options:[]
+        make ~code:Code.content ~token:(token message) ~options:[]
           (Some "Hi coap-client!"))
     in
     traceln "SEND: %a" Coap.Message.pp response;

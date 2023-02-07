@@ -30,12 +30,14 @@ module Signaling = struct
   (* Handler *)
 
   let handler t msg =
-    ignore t;
+    traceln "Tcp.Signaling.handler: %a" Message.pp msg;
     if Message.Code.equal (Message.code msg) Code.csm then (
       (* Set max_message_size *)
       Message.Options.filter_map_values ~number:2 Message.Options.get_uint
         msg.options
       |> List.iter (fun max_message_size ->
+             traceln "Tcp.Signaling.handler - setting max_message_size to %d"
+               max_message_size;
              t.remote_max_message_size <- Some max_message_size);
       ())
     else ()
@@ -51,6 +53,7 @@ let send t msg =
   Buf_write.with_flow t.flow (fun writer -> Message.write_framed writer msg)
 
 let read_msg t =
+  traceln "Tcp - enter read_msg loop";
   match Message.parser_framed t.read_buffer with
   | msg -> Some msg
   | exception End_of_file -> None
@@ -72,6 +75,7 @@ let init ?max_message_size flow =
   (* At the start of transport connection a CSM message must be sent
      and is expected (see https://www.rfc-editor.org/rfc/rfc8323#section-5.3) *)
   let my_csm = Message.make ~code:Signaling.Code.csm ~options:[] None in
+  traceln "Tcp.init - sent CSM";
   send t my_csm;
 
   t
