@@ -166,15 +166,6 @@ module Message : sig
 
   val make :
     code:Code.t -> ?token:string -> options:Options.t list -> string option -> t
-
-  (** {1 Parsers} *)
-
-  val parser : int -> t Buf_read.parser
-  val parser_framed : t Buf_read.parser
-
-  (** {1 Writing} *)
-
-  val write_framed : Buf_write.t -> t -> unit
 end
 
 (** {1 Transport Layers} *)
@@ -192,4 +183,9 @@ module Tcp : sig
   val init : ?max_message_size:int -> #Flow.two_way -> t
   val handle : sw:Switch.t -> handler -> t -> unit
   val send : t -> Message.t -> unit
+
+  (* Message Serialization *)
+
+  val parser : Message.t Buf_read.parser
+  val write : Buf_write.t -> Message.t -> unit
 end

@@ -101,11 +101,11 @@ let write_to_string ~buffer_size f =
   Buffer.to_bytes buffer |> Bytes.to_string
 
 let test_framed =
-  QCheck.Test.make ~name:"write_framed = parser_framed" ~count:200
-    Message.arbitrary (fun msg ->
+  QCheck.Test.make ~name:"write = parser" ~count:200 Message.arbitrary
+    (fun msg ->
       let msg_s =
         write_to_string ~buffer_size:64 (fun writer ->
-            Coap.Message.write_framed writer msg)
+            Coap.Tcp.write writer msg)
       in
 
       Format.printf "Message: %a" Coap.Message.pp msg;
@@ -114,7 +114,7 @@ let test_framed =
         Buf_read.of_flow ~max_size:1000000 @@ Flow.string_source msg_s
       in
 
-      let msg_roundtrip = Coap.Message.parser_framed reader in
+      let msg_roundtrip = Coap.Tcp.parser reader in
 
       Alcotest.check Message.testable "parsed message is equal to original" msg
         msg_roundtrip;
@@ -122,9 +122,7 @@ let test_framed =
       true)
 
 let main () =
-  Alcotest.run "Coap.Message"
-    [
-      ("framed messages", List.map QCheck_alcotest.to_alcotest [ test_framed ]);
-    ]
+  Alcotest.run "Coap"
+    [ ("Coap.Tcp", List.map QCheck_alcotest.to_alcotest [ test_framed ]) ]
 
 let () = Eio_main.run (fun _env -> main ())
