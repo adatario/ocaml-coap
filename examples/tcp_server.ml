@@ -32,9 +32,10 @@ let listen ~net ~sw () =
   let rec loop () =
     Net.accept_fork ~sw listen_socket ~on_error:raise (fun socket addr ->
         traceln "New connection from: %a" Net.Sockaddr.pp addr;
-        (* Initiate a CoAP session *)
-        let session = Coap.Tcp.init socket in
-        Coap.Tcp.handle ~sw (handler session) session);
+        (* Initiate a CoAP connection *)
+        let connection = Coap.Tcp.init socket in
+        (* Receive messages and handle them. *)
+        Coap.Tcp.receive connection (handler connection));
     loop ()
   in
   loop ()

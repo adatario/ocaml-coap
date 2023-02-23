@@ -178,11 +178,18 @@ module Tcp : sig
    *)
 
   type t
-  type handler = Message.t -> unit
+  (** CoAP connection *)
 
   val init : ?max_message_size:int -> #Flow.two_way -> t
-  val handle : sw:Switch.t -> handler -> t -> unit
+  (** [init ~max_message_size flow] initiates a CoAP connection over
+      the TCP flow [flow]. *)
+
+  val receive : t -> (Message.t -> unit) -> unit
+  (** [receive t handler] starts a read loop on the CoAP connection
+      [t] and calls [handler msg] for every [msg] received. *)
+
   val send : t -> Message.t -> unit
+  (** [send t msg] sends the message [msg] over the connection [t]. *)
 
   (* Message Serialization *)
 

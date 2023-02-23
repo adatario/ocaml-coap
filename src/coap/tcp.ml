@@ -162,14 +162,14 @@ let init ?max_message_size flow =
 
   t
 
-let handle ~sw handler t =
+let receive t handler =
   let rec read_loop () =
     match read_msg t with
     | Some msg ->
         if Signaling.is_signaling msg then (
           Signaling.handler t msg;
           read_loop ())
-        else Fiber.fork ~sw (fun () -> handler msg);
+        else handler msg;
         read_loop ()
     | None -> ()
   in
