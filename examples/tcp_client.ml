@@ -8,15 +8,20 @@ open Eio
 
 let server_addr = `Tcp (Net.Ipaddr.V4.loopback, 5683)
 
-let handler _connection message =
-  traceln "RECV: %a" Coap.Message.pp message;
-  (* Only handle a single message and then exit *)
-  raise Exit
-
 let client ~net ~sw () =
   let socket = Net.connect ~sw net server_addr in
   let connection = Coap.Tcp.init socket in
 
+  let read connection =
+    let message = Coap.Tcp.receive connection in
+    traceln "RECV: %a" Coap.Message.pp message
+    (* Only handle a single message and then exit *)
+  in
+
+  (* Start receiving messages in a seperate fiber. *)
+  Fiber.fork ~sw (fun () -> read connection);
+
+  (* Send a message *)
   let msg =
     Coap.Message.(
       make ~code:Code.get
@@ -24,12 +29,7 @@ let client ~net ~sw () =
         None)
   in
 
-  (* Start receiving messages in a seperate fiber. *)
-  Fiber.fork ~sw (fun () -> Coap.Tcp.receive connection (handler connection));
-
-  Coap.Tcp.send connection msg;
-
-  Eio_unix.sleep 1.0
+  Coap.Tcp.send connection msg
 
 let main ~net () =
   try Switch.run @@ fun sw -> client ~net ~sw () with

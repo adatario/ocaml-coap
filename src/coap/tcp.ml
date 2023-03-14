@@ -131,14 +131,7 @@ let write writer (msg : Message.t) =
   | None -> ()
 
 let send t msg = Buf_write.with_flow t.flow (fun writer -> write writer msg)
-
-let read_msg t =
-  (* ignore @@ Buf_read.peek_char t.read_buffer; *)
-  (* traceln "Tcp.read_msg - buffer: %a" Cstruct.hexdump_pp *)
-  (* @@ Buf_read.peek t.read_buffer; *)
-  match parser t.read_buffer with
-  | msg -> Some msg
-  | exception End_of_file -> None
+let receive t = parser t.read_buffer
 
 let init ?max_message_size flow =
   let flow = (flow :> Flow.two_way) in
@@ -160,18 +153,11 @@ let init ?max_message_size flow =
   (* traceln "Tcp.init - sent CSM"; *)
   send t my_csm;
 
+  (* Receive CSM message *)
+  let csm = receive t in
+
+  if Message.(Code.equal (code csm) Signaling.Code.csm) then
+    Signaling.handler t csm
+  else failwith "Expecting a CSM message";
+
   t
-
-let receive t handler =
-  let rec read_loop () =
-    match read_msg t with
-    | Some msg ->
-        if Signaling.is_signaling msg then (
-          Signaling.handler t msg;
-          read_loop ())
-        else handler msg;
-        read_loop ()
-    | None -> ()
-  in
-
-  read_loop ()

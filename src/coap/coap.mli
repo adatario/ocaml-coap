@@ -184,9 +184,8 @@ module Tcp : sig
   (** [init ~max_message_size flow] initiates a CoAP connection over
       the TCP flow [flow]. *)
 
-  val receive : t -> (Message.t -> unit) -> unit
-  (** [receive t handler] starts a read loop on the CoAP connection
-      [t] and calls [handler msg] for every [msg] received. *)
+  val receive : t -> Message.t
+  (** [receive t] reads a single message from the connection. *)
 
   val send : t -> Message.t -> unit
   (** [send t msg] sends the message [msg] over the connection [t]. *)
