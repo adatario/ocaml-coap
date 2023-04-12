@@ -170,6 +170,25 @@ end
 
 (** {1 Transport Layers} *)
 
+module Udp : sig
+  type typ = Confirmable | NonConfirmable | Acknowledgement | Reset
+  type id = int
+
+  val send :
+    ?buffer:Buffer.t ->
+    #Eio.Net.datagram_socket ->
+    Eio.Net.Sockaddr.datagram ->
+    typ ->
+    id ->
+    Message.t ->
+    unit
+
+  (** {1 Message Serialization} *)
+
+  (* val parser : Message.t Buf_read.parser *)
+  val write : Buf_write.t -> typ -> id -> Message.t -> unit
+end
+
 module Tcp : sig
   (** CoAP (Constrained Application Protocol) over TCP
 
@@ -190,7 +209,7 @@ module Tcp : sig
   val send : t -> Message.t -> unit
   (** [send t msg] sends the message [msg] over the connection [t]. *)
 
-  (* Message Serialization *)
+  (** {1 Message Serialization} *)
 
   val parser : Message.t Buf_read.parser
   val write : Buf_write.t -> Message.t -> unit

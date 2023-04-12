@@ -1,3 +1,3 @@
 (executables
- (names tcp_server tcp_client tcp_request_client)
+ (names tcp_server tcp_client tcp_request_client udp_peer)
  (libraries eio_main coap))
