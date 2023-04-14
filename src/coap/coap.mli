@@ -171,8 +171,24 @@ end
 (** {1 Transport Layers} *)
 
 module Udp : sig
-  type typ = Confirmable | NonConfirmable | Acknowledgement | Reset
+  (** CoAP (Constrained Application Protocol) over UDP
+
+      @see <https://www.rfc-editor.org/rfc/rfc7252> The Constrained
+      Application Protocol (CoAP)
+   *)
+
+  type typ =
+    | Confirmable
+    | NonConfirmable
+    | Acknowledgement
+    | Reset
+        (** CoAP message type. This allows a lightweight reliability mechanism.
+
+      @see <https://www.rfc-editor.org/rfc/rfc7252#section-4> Section on Message Transmission in RFC 7252.
+   *)
+
   type id = int
+  (** Type for CoAP message ID *)
 
   val send :
     ?buffer:Buffer.t ->
@@ -182,10 +198,31 @@ module Udp : sig
     id ->
     Message.t ->
     unit
+  (** [send ~buffer socket addr typ id msg] sends the CoAP msg [msg]
+      with message type [typ] and message ID to [addr] over [socket].
+
+      The buffer [buffer] is used to serialize the CoAP message. If
+      [buffer] is not provided a buffer of size 1024 bytes is
+      allocated.
+   *)
+
+  val receive :
+    ?buffer:Cstruct.t ->
+    #Eio.Net.datagram_socket ->
+    Eio.Net.Sockaddr.datagram * typ * id * Message.t
+  (** [receive ~buffer socket] reads a single CoAP message from the socket [socket].
+
+      The buffer [buffer] is used when receiving the datagram from the
+      socket. If [buffer] is not provided a buffer of size 1024 bytes
+      is allocated.
+   *)
 
   (** {1 Message Serialization} *)
 
-  (* val parser : Message.t Buf_read.parser *)
+  val parser : int -> (typ * id * Message.t) Buf_read.parser
+  (** [parser length] returns a parser that reads a single CoAP
+  message of total length [length]. *)
+
   val write : Buf_write.t -> typ -> id -> Message.t -> unit
 end
 

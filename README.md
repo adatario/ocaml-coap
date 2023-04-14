@@ -44,15 +44,14 @@ Hi coap-client!
 
 ## Status
 
-Work-in-progress.
+Currently supports:
 
-Currently only CoAP over TCP is supported (see [RFC 8323](https://www.rfc-editor.org/rfc/rfc8323)).
+- CoAP over TCP ([RFC 8323](https://www.rfc-editor.org/rfc/rfc8323)).
+- CoAP over UDP ([RFC 7252](https://www.rfc-editor.org/rfc/rfc252)).
 
 ### TODOs
 
-- [ ] CoAP over UDP
 - [ ] TCP connection signaling messages (ping, pong, etc.)
-- [ ] Find nice abstraction for handling various transport layers
 - [ ] Block-wise transport ([RFC 7959](https://www.rfc-editor.org/rfc/rfc7959))
 - [ ] Observing resources ([RFC 7641](https://www.rfc-editor.org/rfc/rfc7641))
 - [ ] Resource and Service discovery ([Section 7 of RFC 7252](https://www.rfc-editor.org/rfc/rfc7252#section-7))
