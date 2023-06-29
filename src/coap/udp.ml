@@ -93,7 +93,7 @@ let write writer typ id (msg : Message.t) =
 let send ?(buffer = Buffer.create 1024) socket addr typ id msg =
   Eio.Buf_write.with_flow (Eio.Flow.buffer_sink buffer) (fun writer ->
       write writer typ id msg);
-  Eio.Net.send socket addr (Cstruct.of_bytes (Buffer.to_bytes buffer))
+  Eio.Net.send socket ~dst:addr [ Cstruct.of_bytes (Buffer.to_bytes buffer) ]
 
 let receive ?(buffer = Cstruct.create 1024) socket =
   let addr, recv = Eio.Net.recv socket buffer in
