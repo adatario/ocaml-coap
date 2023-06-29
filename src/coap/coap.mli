@@ -251,3 +251,19 @@ module Tcp : sig
   val parser : Message.t Buf_read.parser
   val write : Buf_write.t -> Message.t -> unit
 end
+
+module Websocket : sig
+  (** CoAP (Constrained Application Protocol) over WebSockets.
+
+      @see <https://www.rfc-editor.org/rfc/rfc8323> RFC 8323: CoAP
+        (Constrained Application Protocol) over TCP, TLS, and WebSockets
+   *)
+
+  (** {1 Message Serialization} *)
+
+  val parser : int -> Message.t Buf_read.parser
+  (** [parser length] returns a parser that reads a single CoAP
+  message of total length [length]. *)
+
+  val write : Buf_write.t -> Message.t -> unit
+end

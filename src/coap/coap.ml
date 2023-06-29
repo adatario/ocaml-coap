@@ -7,3 +7,4 @@
 module Message = Message
 module Udp = Udp
 module Tcp = Tcp
+module Websocket = Websocket
